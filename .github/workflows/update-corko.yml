@@ -1,0 +1,48 @@
+# UPDATE CORKO -- for a copy made by the Deploy to Cloudflare button.
+#
+# On your copy's GitHub page: Actions -> Update Corko -> Run workflow.
+# It applies the changes between your version and the newest release
+# (or the one you name), keeping your own edits, and pushes. The push is
+# what makes Cloudflare build and deploy the update. The run's summary
+# lists what changed and whether your team needs to reload together.
+# scripts/update-corko.mjs does the work; its header says how.
+name: Update Corko
+on:
+  workflow_dispatch:
+    inputs:
+      exported:
+        description: "I exported my project first (in Corko: Boards menu -> Export project...)"
+        type: boolean
+        required: true
+        default: false
+      version:
+        description: "Version to update to (leave blank for the newest)"
+        type: string
+        required: false
+        default: ""
+permissions:
+  contents: write
+jobs:
+  update:
+    # the public repo is where releases come FROM; it never updates itself
+    if: github.repository != 'gonzoisacat/corko'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check the export box
+        if: ${{ !inputs.exported }}
+        run: |
+          echo "## Export first" >> "$GITHUB_STEP_SUMMARY"
+          echo "In Corko, use Boards menu -> Export project... to save a copy, then run this again with the box ticked." >> "$GITHUB_STEP_SUMMARY"
+          exit 1
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      # The NEWEST updater from the public repo, not this copy's own: a fix
+      # to the updater then reaches every copy, however old.
+      - name: Fetch the updater
+        run: curl -fsSL https://raw.githubusercontent.com/gonzoisacat/corko/main/scripts/update-corko.mjs -o "$RUNNER_TEMP/update-corko.mjs"
+      - name: Apply the update
+        run: node "$RUNNER_TEMP/update-corko.mjs" "${{ inputs.version }}"
+      - name: Push
+        run: git push

@@ -12,6 +12,9 @@ permissions:
   pull-requests: write
 jobs:
   close:
+    # only on the public repo; a copy made by the deploy button is its
+    # owner's to use as they like
+    if: github.repository == 'gonzoisacat/corko'
     runs-on: ubuntu-latest
     steps:
       - name: Close with a note

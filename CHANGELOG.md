@@ -15,6 +15,14 @@ release it is:
 
 Versions stay below 1.0 until user accounts exist (spec Phase 7).
 
+## 0.9.4 -- 2026-09-25 -- ordinary (epoch 1)
+
+- **Update Corko**, a workflow in every one-click copy: Actions -> Update
+  Corko -> Run workflow applies the newest release, keeps your own edits,
+  and Cloudflare redeploys. A copy made before 0.9.4 needs its
+  `.github/workflows/update-corko.yml` copied in once, by hand.
+- The pull-request closer runs only on the public repo.
+
 ## 0.9.3 -- 2026-09-24 -- ordinary (epoch 1)
 
 - **Deploy to Cloudflare button** in the README: a copy in your GitHub,

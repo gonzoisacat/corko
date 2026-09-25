@@ -172,6 +172,21 @@ cents instead of stopping.
 Each release is a git tag with an entry in `CHANGELOG.md`. Every entry
 says whether it is **ordinary** or a **coordinated reload**.
 
+**If you deployed with one click:**
+
+1. In Corko, **Export project...** from the Boards menu.
+2. On GitHub, open your copy of Corko, then **Actions -> Update Corko ->
+   Run workflow**.
+3. Tick the box that says you exported, leave the version blank for the
+   newest, and click **Run workflow**.
+4. When the run finishes, its summary lists what changed. Cloudflare
+   then builds and deploys the update, which takes a few minutes.
+
+Your own edits to your copy are kept. If one touches the same lines as
+the update, the run stops without changing anything and names the file.
+
+**If you deployed from the command line:**
+
 1. Read the changelog entries since your version (`npm pkg get version`
    prints yours).
 2. In the app, **Export project...** from the Boards menu.
@@ -180,9 +195,10 @@ says whether it is **ordinary** or a **coordinated reload**.
    npm install
    npm run deploy
    ```
-4. For a **coordinated reload**, have everyone reload after the deploy.
-   Open tabs show a red light in the top bar until they do. After an
-   ordinary release the light is yellow, and reloading can wait.
+
+**Either way,** for a **coordinated reload**, have everyone reload after
+the deploy. Open tabs show a red light in the top bar until they do.
+After an ordinary release the light is yellow, and reloading can wait.
 
 Secrets, projects, boards and stills all carry over.
 
