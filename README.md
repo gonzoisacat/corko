@@ -95,13 +95,13 @@ npm test           # the headless test suite
 
 ## Deploying
 
-See **[docs/deploy.md](docs/deploy.md)** -- a free-plan checklist,
-then deploy, set a password, what it costs, and how to update.
-Releases are tags with an entry each in [CHANGELOG.md](CHANGELOG.md).
-Two things to know before you deploy: there are no user accounts yet,
-so everyone with the URL and the password shares one project with
-equal rights; and a fresh deployment is **open until you set
-`CORKO_PASSWORD`**.
+Click **Deploy to Cloudflare** at the top of this page, or see
+**[docs/deploy.md](docs/deploy.md)** for the command line, the Admin
+password, what it costs, and how to update. Releases are tags with an
+entry each in [CHANGELOG.md](CHANGELOG.md). There are no user
+accounts: everyone with the URL and a password edits that project with equal
+rights. A fresh deployment is open until you set its **Admin
+password**, which it asks for the first time you open it.
 
 ## Suggestions and bugs
 

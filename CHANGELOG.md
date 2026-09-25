@@ -15,6 +15,13 @@ release it is:
 
 Versions stay below 1.0 until user accounts exist (spec Phase 7).
 
+## 0.9.5 -- 2026-09-25 -- ordinary (epoch 1)
+
+- Update Corko no longer asks you to copy in a workflow file your copy
+  already has.
+- The README and the deploy guide describe the Deploy to Cloudflare
+  button and the Admin password; the staging copy is named correctly.
+
 ## 0.9.4 -- 2026-09-25 -- ordinary (epoch 1)
 
 - **Update Corko**, a workflow in every one-click copy: Actions -> Update

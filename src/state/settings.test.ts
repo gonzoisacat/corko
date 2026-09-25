@@ -96,9 +96,9 @@ describe("identity stability", () => {
 describe("global keys", () => {
   it("noteAuthor is global however it is reached", async () => {
     const s = await fresh();
-    s.setSetting("board-a", "noteAuthor", "Derek");
+    s.setSetting("board-a", "noteAuthor", "Robin");
 
-    expect(s.settingsFor("board-b").noteAuthor).toBe("Derek"); // not board-a's alone
+    expect(s.settingsFor("board-b").noteAuthor).toBe("Robin"); // not board-a's alone
     expect(s.hasTweaks("board-a")).toBe(false); // and it left no per-board layer
   });
 

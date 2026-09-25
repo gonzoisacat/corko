@@ -14,7 +14,7 @@ import type { FieldDef } from "../state/types";
 
 const AT = Date.UTC(2026, 8, 9, 12, 34); // a fixed stamp, so rows are comparable
 const note = (extra: Partial<Note> = {}): Note =>
-  ({ id: "n1", body: "Lose the crew credits", author: "Derek", state: "open", createdAt: AT, ...extra }) as Note;
+  ({ id: "n1", body: "Lose the crew credits", author: "Robin", state: "open", createdAt: AT, ...extra }) as Note;
 const row = (extra: Partial<NoteRow> = {}): NoteRow =>
   ({ nodeId: "c1", title: "Las Vegas", depth: 2, path: "Reel 1 > Act 1", nested: false, order: 0, note: note(), ...extra }) as NoteRow;
 
@@ -36,7 +36,7 @@ describe("notesOutline", () => {
       "X",
     );
     expect(out).toContain("[Done-ish] Lose the crew credits");
-    expect(out).toContain("Derek");
+    expect(out).toContain("Robin");
     expect(out).toContain("> Sam: Moved to the tail");
   });
   /* The implementation-note FIELD is retired: a stored one reads as the

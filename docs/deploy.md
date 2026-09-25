@@ -122,9 +122,10 @@ other.
 npm run deploy:staging
 ```
 
-This deploys a second instance, `<name>-staging`, at its own address
-with its own storage, and its own Admin password set the same way. Use it to try passwords and projects before
-setting them up for real.
+This deploys a second instance, `corko-staging` (named under
+`env.staging` in `wrangler.jsonc`), at its own address with its own
+storage and its own Admin password, set the same way. Use it to try
+passwords and projects before setting them up for real.
 
 ## 6. Shared frame stills (optional)
 

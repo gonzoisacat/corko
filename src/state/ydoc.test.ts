@@ -1024,11 +1024,11 @@ describe("tags (ADR 0002)", () => {
  * has to converge when two peers do it at once. */
 describe("notes", () => {
   it("a card holds several notes, each with its own author", () => {
-    const a = ops.addNote("b1", { body: "Trim the head", author: "Derek" });
+    const a = ops.addNote("b1", { body: "Trim the head", author: "Robin" });
     const b = ops.addNote("b1", { body: "Check the clearance", author: "Sam" });
     const notes = find(getSnapshot(), "b1")!.notes!;
     expect(notes.map((n) => n.id)).toEqual([a, b]); // written order
-    expect(notes.map((n) => n.author)).toEqual(["Derek", "Sam"]);
+    expect(notes.map((n) => n.author)).toEqual(["Robin", "Sam"]);
     expect(notes.every((n) => n.state === "open")).toBe(true);
     expect(notes[0].createdAt).toBeGreaterThan(0);
   });
@@ -1159,9 +1159,9 @@ describe("notes", () => {
 
   it("the implementation note carries who wrote it and when, and loses both with the words", () => {
     const a = ops.addNote("b1", { body: "Hold on her a beat longer" });
-    ops.setNote("b1", a, { impl: "Held 8 frames", implBy: "Derek", implAt: 1700000000000 });
+    ops.setNote("b1", a, { impl: "Held 8 frames", implBy: "Robin", implAt: 1700000000000 });
     let note = find(getSnapshot(), "b1")!.notes![0];
-    expect(note).toMatchObject({ impl: "Held 8 frames", implBy: "Derek", implAt: 1700000000000 });
+    expect(note).toMatchObject({ impl: "Held 8 frames", implBy: "Robin", implAt: 1700000000000 });
     // a second writer takes the stamp
     ops.setNote("b1", a, { impl: "Held 12", implBy: "Sam", implAt: 1700000001000 });
     note = find(getSnapshot(), "b1")!.notes![0];
@@ -1180,9 +1180,9 @@ describe("notes", () => {
   });
 
   it("a reply hangs off its note, and deleting the last one clears them", () => {
-    const a = ops.addNote("b1", { body: "Why this cut?", author: "Derek" });
+    const a = ops.addNote("b1", { body: "Why this cut?", author: "Robin" });
     const r1 = ops.addReply("b1", a, { body: "It's the only clean take", author: "Sam" });
-    const r2 = ops.addReply("b1", a, { body: "Agreed", author: "Derek" });
+    const r2 = ops.addReply("b1", a, { body: "Agreed", author: "Robin" });
     let note = find(getSnapshot(), "b1")!.notes![0];
     expect(note.replies?.map((r) => r.body)).toEqual(["It's the only clean take", "Agreed"]);
     ops.setNote("b1", a, { body: "edited" }, r1);
@@ -1204,7 +1204,7 @@ describe("notes", () => {
   });
 
   it("notes ride along with a duplicated card", () => {
-    const a = ops.addNote("b1", { body: "Carried", author: "Derek" });
+    const a = ops.addNote("b1", { body: "Carried", author: "Robin" });
     ops.addReply("b1", a, { body: "Also carried" });
     const copy = ops.duplicateNode("b1");
     const notes = find(getSnapshot(), copy)!.notes!;
@@ -1246,7 +1246,7 @@ describe("notes", () => {
 
   it("an op works on a card whose notes the migration hasn't reached", () => {
     doc.transact(() => findInDoc(doc, "b3")!.map.set("notes", "written last year"), "local");
-    const added = ops.addNote("b3", { body: "written today", author: "Derek" });
+    const added = ops.addNote("b3", { body: "written today", author: "Robin" });
     const notes = find(getSnapshot(), "b3")!.notes!;
     expect(notes.map((n) => n.body)).toEqual(["written last year", "written today"]);
     expect(notes[1].id).toBe(added);

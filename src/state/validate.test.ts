@@ -127,7 +127,7 @@ describe("sanitizeBoard", () => {
           id: "b1",
           title: "One",
           notes: [
-            { id: "nt1", body: "Real note", author: "Derek", state: "resolved", createdAt: 5 },
+            { id: "nt1", body: "Real note", author: "Robin", state: "resolved", createdAt: 5 },
             { id: "nt2", body: "", author: "Sam" }, // no body: not a note
             { body: "No id is fine", state: "nonsense" },
             "junk",
@@ -142,7 +142,7 @@ describe("sanitizeBoard", () => {
     const [one, two, three, four] = b.roots;
     expect(one.notes!.map((n) => n.body)).toEqual(["Real note", "No id is fine"]);
     // the old second state reads as "done" (state/noteStates.ts)
-    expect(one.notes![0]).toMatchObject({ author: "Derek", state: "done", createdAt: 5 });
+    expect(one.notes![0]).toMatchObject({ author: "Robin", state: "done", createdAt: 5 });
     expect(one.notes![1].state).toBe("open"); // an unknown state is open
     // the same derived id the doc migration mints, so a file and a doc agree
     expect(two.notes).toEqual([

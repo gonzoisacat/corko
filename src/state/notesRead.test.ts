@@ -16,7 +16,7 @@ import type { Board, Note } from "./types";
 const note = (id: string, replies: Note[] = []): Note => ({
   id,
   body: "b",
-  author: "Derek",
+  author: "Robin",
   state: "open",
   createdAt: 0,
   ...(replies.length ? { replies } : {}),

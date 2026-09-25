@@ -118,7 +118,19 @@ function main() {
   const from = `${TAG_NS}v${current}`;
   const to = `${TAG_NS}v${target}`;
   const changed = git(["diff", "--name-only", from, to]).split("\n").filter(Boolean);
-  const workflows = changed.filter((f) => f.startsWith(".github/"));
+  /* Only the workflow files this copy does not already have as the
+   * release has them -- a copy that copied one in by hand is not told to
+   * do it again. */
+  const workflows = changed.filter((f) => {
+    if (!f.startsWith(".github/")) return false;
+    let want = null;
+    try {
+      want = execFileSync("git", ["show", `${to}:${f}`], { stdio: ["ignore", "pipe", "ignore"] });
+    } catch {
+      return fs.existsSync(f); // deleted in the release: worth saying if it is still here
+    }
+    return !fs.existsSync(f) || !fs.readFileSync(f).equals(want);
+  });
   const patch = execFileSync("git", ["diff", "--binary", "--full-index", from, to, "--", ".", ":(exclude).github"]);
 
   if (patch.length) {

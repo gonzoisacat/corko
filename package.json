@@ -1,7 +1,7 @@
 {
   "name": "corko",
   "private": true,
-  "version": "0.9.4",
+  "version": "0.9.5",
   "type": "module",
   "description": "Corko -- a collaborative beat-boarding app for documentary editing (Phase 0 + Phase 1).",
   "license": "AGPL-3.0-or-later",

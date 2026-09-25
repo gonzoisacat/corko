@@ -50,8 +50,8 @@ function boardWithNotes(): Board {
   const b = board4();
   const s1 = b.roots[0].children[0].children[0]; // scene s1: b1 b2 b3
   const s2 = b.roots[0].children[0].children[1]; // scene s2: b4
-  s1.children[0].notes = [note("n1", "Trim the head", "Derek"), note("n2", "Second one", "Sam")];
-  s1.notes = [note("n3", "Whole scene runs long", "Derek", "done")];
+  s1.children[0].notes = [note("n1", "Trim the head", "Robin"), note("n2", "Second one", "Sam")];
+  s1.notes = [note("n3", "Whole scene runs long", "Robin", "done")];
   s2.children[0].notes = [note("n4", "No author here")];
   return b;
 }
@@ -79,7 +79,7 @@ describe("collectNotes", () => {
 
 describe("noteAuthors", () => {
   it("lists who wrote something, unattributed last", () => {
-    expect(noteAuthors(collectNotes(boardWithNotes()))).toEqual(["Derek", "Sam", UNATTRIBUTED]);
+    expect(noteAuthors(collectNotes(boardWithNotes()))).toEqual(["Robin", "Sam", UNATTRIBUTED]);
   });
 
   it("counts reply authors too -- they're in the conversation", () => {
@@ -96,7 +96,7 @@ describe("filterNotes", () => {
   const all = { authors: null, replies: true, state: ALL_STATES, unread: false, q: "" };
 
   it("filters by author and by state, and both at once", () => {
-    expect(filterNotes(rows, { ...all, authors: new Set(["Derek"]) }).map((r) => r.note.id)).toEqual([
+    expect(filterNotes(rows, { ...all, authors: new Set(["Robin"]) }).map((r) => r.note.id)).toEqual([
       "n3",
       "n1",
     ]);
@@ -106,7 +106,7 @@ describe("filterNotes", () => {
       "n4",
     ]);
     expect(
-      filterNotes(rows, { ...all, authors: new Set(["Derek"]), state: new Set(["open"]) }).map((r) => r.note.id),
+      filterNotes(rows, { ...all, authors: new Set(["Robin"]), state: new Set(["open"]) }).map((r) => r.note.id),
     ).toEqual(["n1"]);
   });
 
@@ -190,7 +190,7 @@ describe("the card walk, the draft's place and the focus effect (2026-09-08)", (
 
 describe("lastMessage", () => {
   it("is the newest reply, or the note itself when nobody answered", () => {
-    const bare = note("n1", "Trim the head", "Derek");
+    const bare = note("n1", "Trim the head", "Robin");
     expect(lastMessage(bare).id).toBe("n1");
     bare.replies = [note("r1", "ok", "Sam"), note("r2", "done", "Alex")];
     expect(lastMessage(bare).id).toBe("r2");
@@ -265,20 +265,20 @@ describe("state groups and the notes-only search (2026-09-06)", () => {
   });
 
   it("the author filter: null is everyone, and a set that covers the roster collapses back to it", () => {
-    const roster = ["Alex", "Derek", UNATTRIBUTED];
+    const roster = ["Alex", "Robin", UNATTRIBUTED];
     const one = setAuthorIn(null, "Alex", false, roster);
-    expect(one && [...one]).toEqual(["Derek", UNATTRIBUTED]);
+    expect(one && [...one]).toEqual(["Robin", UNATTRIBUTED]);
     expect(setAuthorIn(null, "Alex", true, roster)).toBeNull(); // already in: untouched
     expect(setAuthorIn(one, "Alex", true, roster)).toBeNull(); // covers the roster again
-    expect(toggleAuthor(null, "Derek", roster)?.has("Derek")).toBe(false);
+    expect(toggleAuthor(null, "Robin", roster)?.has("Robin")).toBe(false);
     expect(authorFilterLabel(null)).toBe("All authors");
     expect(authorFilterLabel(new Set())).toBe("No authors");
     expect(authorFilterLabel(new Set([UNATTRIBUTED]))).toBe("(unattributed)");
-    expect(authorFilterLabel(new Set(["Alex", "Derek"]))).toBe("2 authors");
+    expect(authorFilterLabel(new Set(["Alex", "Robin"]))).toBe("2 authors");
     // a name that left the board leaves the filter; the last one leaving means everyone
     expect(pruneAuthors(new Set(["Alex", "Ghost"]), roster)?.has("Ghost")).toBe(false);
     expect(pruneAuthors(new Set(["Ghost"]), ["Ghost"])).toEqual(new Set(["Ghost"]));
-    expect(pruneAuthors(new Set(["Alex", "Derek", "Ghost"]), ["Alex", "Derek"])).toBeNull();
+    expect(pruneAuthors(new Set(["Alex", "Robin", "Ghost"]), ["Alex", "Robin"])).toBeNull();
     expect(pruneAuthors(null, roster)).toBeNull();
   });
 
@@ -298,10 +298,10 @@ describe("state groups and the notes-only search (2026-09-06)", () => {
     const b = boardWithNotes();
     const rows = collectNotes(b);
     const withReply = rows.map((r) =>
-      r.note.id === "n1" ? { ...r, note: { ...r.note, replies: [note("r1", "yes", "Derek")] } } : r,
+      r.note.id === "n1" ? { ...r, note: { ...r.note, replies: [note("r1", "yes", "Robin")] } } : r,
     );
     const counts = authorCounts(withReply);
-    expect(counts.get("Derek")).toBe(rows.filter((r) => r.note.author === "Derek").length); // n1 is already his
+    expect(counts.get("Robin")).toBe(rows.filter((r) => r.note.author === "Robin").length); // n1 is already his
     expect(counts.get(UNATTRIBUTED)).toBe(1);
   });
 
@@ -327,7 +327,7 @@ describe("state groups and the notes-only search (2026-09-06)", () => {
   });
 
   it("the search reads the whole thread -- body, implementation, replies, names", () => {
-    const n: Note = { ...note("x", "Move the crew credits", "Derek"), impl: "new pass on credits for eval" };
+    const n: Note = { ...note("x", "Move the crew credits", "Robin"), impl: "new pass on credits for eval" };
     n.replies = [note("r", "agreed, doing it Monday", "Sam")];
     expect(noteMatches(n, "CREW")).toBe(true);
     expect(noteMatches(n, "eval")).toBe(true);
@@ -340,7 +340,7 @@ describe("state groups and the notes-only search (2026-09-06)", () => {
   it("the search composes with the other filters", () => {
     const rows = collectNotes(boardWithNotes());
     expect(filterNotes(rows, F({ q: "second" })).map((r) => r.note.id)).toEqual(["n2"]);
-    expect(filterNotes(rows, F({ q: "second", authors: new Set(["Derek"]) }))).toEqual([]);
+    expect(filterNotes(rows, F({ q: "second", authors: new Set(["Robin"]) }))).toEqual([]);
     expect(filterNotes(rows, F({ state: CLOSED_STATES })).map((r) => r.note.id)).toEqual(["n3"]);
     expect(filterNotes(rows, F({ state: OPEN_STATES })).map((r) => r.note.id)).toEqual(["n1", "n2", "n4"]);
   });
