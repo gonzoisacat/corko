@@ -1,12 +1,12 @@
 import { StrictMode, useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
 import App from "./App";
-import { AccessGate, ProjectChooser } from "./ui/AccessGate";
+import { AccessGate, AdminSetup, ProjectChooser } from "./ui/AccessGate";
 import { projectId, switchProject, takeSkipSplash } from "./state/project";
 import { ErrorBoundary } from "./ui/ErrorBoundary";
 import { SplashIntro } from "./ui/SplashIntro";
 import { installLayoutDoctor } from "./ui/layoutDoctor";
-import { checkAccess, storedKey, type AccessState } from "./state/access";
+import { checkAccess, setupSkipped, skipSetup, storedKey, type AccessState } from "./state/access";
 import { chooseBlobStore } from "./state/blobStore";
 import { settingsFor } from "./state/settings";
 import "./index.css";
@@ -40,6 +40,8 @@ function Root() {
    * means go there; several means ask (ProjectChooser); the key opening
    * this one means carry on. Returns whether the boot may continue. */
   const [choose, setChoose] = useState<string[] | null>(null);
+  /* The Admin setup card, skipped in this browser (state/access.ts). */
+  const [skipped, setSkipped] = useState(setupSkipped);
   const settle = (a: AccessState): boolean => {
     /* A "*" key opens ANY project-shaped room -- including one set up
      * from the app a moment ago that the access map does not name yet --
@@ -87,6 +89,18 @@ function Root() {
               /* The key only just became good, so the store choice runs
                * NOW rather than at boot (where it would have met a 401). */
               void chooseBlobStore(storedKey);
+            }}
+          />
+        ) : access.setup && !skipped ? (
+          <AdminSetup
+            onDone={(a) => {
+              setAccess(a);
+              if (!settle(a)) return;
+              void chooseBlobStore(storedKey);
+            }}
+            onSkip={() => {
+              skipSetup();
+              setSkipped(true);
             }}
           />
         ) : choose ? (

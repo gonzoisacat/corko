@@ -15,6 +15,20 @@ release it is:
 
 Versions stay below 1.0 until user accounts exist (spec Phase 7).
 
+## 0.9.3 -- 2026-09-24 -- ordinary (epoch 1)
+
+- **Deploy to Cloudflare button** in the README: a copy in your GitHub,
+  built and deployed by Cloudflare, no terminal.
+
+- **Set the Admin password in the app.** A fresh instance opens on a
+  setup card that sets it; Project/Share settings changes or removes it.
+  `CORKO_PASSWORD` still works beside it and is the way back in if it is
+  forgotten.
+- The usage meters are set in the Cloudflare dashboard after deploying,
+  and `wrangler.jsonc` keeps them across deploys (`keep_vars`).
+- Removed `postinstall-postinstall`, which broke installs on machines
+  that have Yarn, including Cloudflare's build.
+
 ## 0.9.2 -- 2026-09-24 -- ordinary (epoch 1)
 
 - `docs/deploy.md` is rewritten as a plain how-to: a short checklist,

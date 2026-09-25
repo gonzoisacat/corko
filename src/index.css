@@ -9914,6 +9914,33 @@ kbd {
   background: #b9c6dc;
   cursor: default;
 }
+/* THE ADMIN SETUP CARD: the password card, a little wider for its
+   longer title, with a quiet hint line and a text-button to skip. */
+.gate-card.gate-setup {
+  max-width: 380px;
+}
+.gate-setup .gate-sub {
+  line-height: 1.45;
+}
+.gate-hint {
+  font-size: 12px;
+  color: #6a6a62;
+}
+.gate-skip {
+  font: inherit;
+  font-size: 12.5px;
+  align-self: center;
+  border: 0;
+  background: transparent;
+  color: #5a5a54;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+  padding: 2px 4px;
+}
+.gate-skip:hover {
+  color: #23262b;
+}
 
 /* ---- "elsewhere in the project" ------------------------------------ *
    Tags and metadata categories are project-wide, so a board sees the union

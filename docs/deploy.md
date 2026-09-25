@@ -3,16 +3,29 @@
 One Cloudflare Worker serves the app and the sync server together. It
 runs on Cloudflare's free plan.
 
-## The short version
+## Deploy with one click
+
+1. Click **Deploy to Cloudflare** at the top of the README.
+2. Sign in to Cloudflare, or make a free account.
+3. Connect your GitHub account when asked. Cloudflare puts a copy of
+   Corko in your GitHub and deploys from it.
+4. Choose a **Project name**. It names your Worker, your copy on GitHub,
+   and the start of your URL.
+5. Click **Deploy** and wait for the build, a few minutes.
+6. Open the URL it shows and set your Admin password.
+
+The rest of this guide is the same setup from the command line, and the
+optional extras.
+
+## The short version, from the command line
 
 - Make a free Cloudflare account at dash.cloudflare.com.
 - Install Node 20 or newer, clone this repo, and run `npm install`.
 - `npx wrangler login` -- authorizes this machine against your account.
 - `npm run deploy` -- builds and deploys, then prints your URL,
   `https://corko.<your-subdomain>.workers.dev`.
-- `npx wrangler secret put CORKO_PASSWORD` -- sets the password.
-- Open the URL, type the password, make a board. Send your team the URL
-  and the password.
+- Open the URL and set your Admin password on the first screen.
+- Make a board. Send your team the URL and the password.
 
 Everything below is detail on those steps and the optional extras.
 
@@ -43,25 +56,37 @@ To change the first part of the URL, edit `"name": "corko"` in
 `wrangler.jsonc` before deploying. To use your own domain, add a
 `routes` entry to `wrangler.jsonc` and deploy again.
 
-## 3. Set a password
+## 3. Set your Admin password
+
+The first time you open your URL, Corko asks you to set an Admin
+password. It opens every project in the instance. Until one is set,
+anyone with the URL can open the instance, and **Skip for now** leaves
+it that way.
+
+To change or remove it later: the project name at the top left, then
+**Project/Share settings...**, then **Admin password**.
+
+**If you forget it:** in the Cloudflare dashboard, open your Worker,
+then **Settings -> Variables and Secrets**, and add a secret named
+`CORKO_PASSWORD`. That password opens everything too, beside the Admin
+password. The same from the command line:
 
 ```bash
 npx wrangler secret put CORKO_PASSWORD
 ```
 
-It takes effect immediately, with no redeploy. Until it is set, anyone
-with the URL can open the instance. To check it:
+To check the instance is protected:
 
 ```bash
 curl -i https://corko.<your-subdomain>.workers.dev/auth
-# 401  {"required":true,"ok":false}   <- password set
-# 200  {"required":false,"ok":true}   <- no password yet
+# 401  {"required":true,"ok":false}   <- protected
+# 200  {"required":false,"ok":true,...} <- no password yet
 ```
 
 ## 4. Projects and team passwords (optional)
 
 One instance can hold several projects. Each project has its own boards
-and can have its own password. Your `CORKO_PASSWORD` opens all of them.
+and can have its own password. Your Admin password opens all of them.
 
 **From inside the app:** the project name at the top left is a menu.
 With your password it offers **Set up new project...** and **Project
@@ -95,11 +120,10 @@ other.
 
 ```bash
 npm run deploy:staging
-npx wrangler secret put CORKO_PASSWORD --env staging
 ```
 
 This deploys a second instance, `<name>-staging`, at its own address
-with its own storage. Use it to try passwords and projects before
+with its own storage, and its own Admin password set the same way. Use it to try passwords and projects before
 setting them up for real.
 
 ## 6. Shared frame stills (optional)
@@ -122,14 +146,16 @@ limits the instance is using.
 
 1. In the Cloudflare dashboard: **My Profile -> API Tokens -> Create
    Token -> Custom**, with one permission: **Account -> Account
-   Analytics -> Read**.
-2. ```bash
-   npx wrangler secret put CORKO_USAGE_TOKEN
-   ```
-3. In `wrangler.jsonc`, set `CORKO_ACCOUNT_ID` to your account id
-   (`npx wrangler whoami` prints it) and `CORKO_PLAN` to `"free"` or
-   `"paid"`.
-4. Run `npm run deploy` again.
+   Analytics -> Read**. Copy the token.
+2. Open your Worker, then **Settings -> Variables and Secrets**, and add:
+   - `CORKO_ACCOUNT_ID`, as text: your account ID. It is the long code
+     after `dash.cloudflare.com/` in the dashboard's address bar.
+   - `CORKO_USAGE_TOKEN`, as a secret: the token from step 1.
+   - `CORKO_PLAN`, as text: `paid` if you pay for Workers Paid. Leave it
+     out on the free plan.
+3. Deploy the change when the dashboard offers it.
+
+These settings stay put when you update.
 
 ## What it costs
 

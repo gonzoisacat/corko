@@ -25,6 +25,7 @@ export default defineConfig({
     host: "127.0.0.1",
     proxy: {
       "/auth": "http://127.0.0.1:8787",
+      "/admin": "http://127.0.0.1:8787",
       "/projects": "http://127.0.0.1:8787",
       "/still": "http://127.0.0.1:8787",
       "/stills": "http://127.0.0.1:8787",

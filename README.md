@@ -3,9 +3,11 @@
 A lightweight, collaborative beat-boarding app for documentary editing.
 Free, open-source, self-deployable.
 
-**To run your own copy, see [docs/deploy.md](docs/deploy.md).** One
-Cloudflare Worker serves the app and the sync server together; the free
-plan covers a small team, and there is nothing else to sign up for.
+[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/gonzoisacat/corko)
+
+**To run your own copy**, click the button above, or see
+[docs/deploy.md](docs/deploy.md). One Cloudflare Worker serves the app
+and the sync server together, on Cloudflare's free plan.
 
 ## What it is
 

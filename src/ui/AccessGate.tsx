@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { checkAccess, storeKey, type AccessState } from "../state/access";
+import { ADMIN_MIN_LENGTH, checkAccess, putAdminPassword, storeKey, type AccessState } from "../state/access";
 import { switchProject } from "../state/project";
 import { CorkoMark } from "./CorkoMark";
 
@@ -39,6 +39,96 @@ export function ProjectChooser({ projects }: { projects: string[] }) {
           ))}
         </div>
       </div>
+    </div>
+  );
+}
+
+/* THE ADMIN SETUP CARD (owner, 2026-09-24, his wording). Shown in
+ * place of the app while the instance has no password of any kind, so
+ * the deployer -- almost always the first visitor, seconds after the
+ * deploy -- sets one without a terminal. Anyone else who lands here is
+ * told to go back to whoever sent the link. "Skip for now" leaves the
+ * instance open and hides the card in this browser only. If somebody
+ * else sets a password while this card is up, the server refuses this
+ * one and the ordinary password screen takes over. */
+export function AdminSetup({ onDone, onSkip }: { onDone: (state: AccessState) => void; onSkip: () => void }) {
+  const [value, setValue] = useState("");
+  const [again, setAgain] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (busy) return;
+    if (value.length < ADMIN_MIN_LENGTH) return setError(`Use at least ${ADMIN_MIN_LENGTH} characters.`);
+    if (value !== again) return setError("The two passwords don't match.");
+    setBusy(true);
+    setError("");
+    const status = await putAdminPassword(value);
+    if (status === 204) {
+      storeKey(value);
+      onDone(await checkAccess(value));
+      return;
+    }
+    if (status === 401 || status === 403) {
+      onDone(await checkAccess());
+      return;
+    }
+    setBusy(false);
+    setError(status === 400 ? `Use at least ${ADMIN_MIN_LENGTH} characters.` : "Couldn't reach the server. Try again.");
+  };
+
+  return (
+    <div className="gate">
+      <form className="gate-card gate-setup" onSubmit={submit}>
+        <div className="gate-brand">
+          <CorkoMark size={34} egg={false} />
+          <span className="gate-wordmark">Corko</span>
+        </div>
+        <h1 className="gate-title">Set up your Admin password for this Corko instance</h1>
+        <p className="gate-sub">
+          (If you are not the Admin of this Corko, notify the person who sent you this link to set an Admin
+          password.)
+        </p>
+        <input
+          className={"gate-input" + (error ? " wrong" : "")}
+          type="password"
+          value={value}
+          autoFocus
+          autoComplete="new-password"
+          aria-label="Admin password"
+          placeholder="Admin password"
+          onChange={(e) => {
+            setValue(e.target.value);
+            setError("");
+          }}
+        />
+        <input
+          className={"gate-input" + (error ? " wrong" : "")}
+          type="password"
+          value={again}
+          autoComplete="new-password"
+          aria-label="Confirm Admin password"
+          placeholder="Confirm password"
+          onChange={(e) => {
+            setAgain(e.target.value);
+            setError("");
+          }}
+        />
+        {error ? (
+          <div className="gate-error" role="alert">
+            {error}
+          </div>
+        ) : (
+          <div className="gate-hint">At least {ADMIN_MIN_LENGTH} characters. It opens every project here.</div>
+        )}
+        <button className="gate-btn" type="submit" disabled={!value || !again || busy}>
+          {busy ? "Setting..." : "Set Admin password"}
+        </button>
+        <button className="gate-skip" type="button" onClick={onSkip}>
+          Skip for now, keep it open
+        </button>
+      </form>
     </div>
   );
 }
@@ -93,7 +183,7 @@ export function AccessGate({ onUnlocked }: { onUnlocked: (state: AccessState) =>
                 Cloudflare account -- there is no email or question to
                 fall back on, and that is by design. */}
             <span className="gate-help">
-              Forgotten? Whoever runs this Corko can set a new one. If that is you, it is one command from
+              Forgotten? Whoever runs this Corko can set a new one. If that is you, set CORKO_PASSWORD in
               your Cloudflare account -- see the deploy guide.
             </span>
           </div>

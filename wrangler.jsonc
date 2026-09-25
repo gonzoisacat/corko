@@ -45,18 +45,16 @@
   // card on file even on its free tier) and uncomment:
   // "r2_buckets": [{ "binding": "CORKO_STILLS", "bucket_name": "corko-stills" }],
   //
-  // USAGE METERS (optional, docs/deploy.md step 7; worker/usage.ts).
-  // Neither of these is a secret: the account id is in every dashboard
-  // URL and grants nothing without a token, and the plan just picks
-  // which limits table the meters read against ("free" = the daily
-  // cliffs, "paid" = the monthly included allowances). The token that
-  // actually reads the numbers is CORKO_USAGE_TOKEN, a secret -- see
-  // worker/index.ts Env. Put YOUR account id here (dashboard URL, or
-  // `npx wrangler whoami`); without one the meter says "not wired up".
-  "vars": {
-    "CORKO_ACCOUNT_ID": "",
-    "CORKO_PLAN": "free"
-  },
+  // USAGE METERS (optional, docs/deploy.md step 7; worker/usage.ts) are
+  // configured OUTSIDE this file, on purpose: the Deploy to Cloudflare
+  // button turns every var declared here into a REQUIRED field on its
+  // form, and the meters are an add-on step after deploying. Set them in
+  // the dashboard (Worker -> Settings -> Variables and Secrets):
+  // CORKO_ACCOUNT_ID and CORKO_PLAN ("free" | "paid", default free) as
+  // text, CORKO_USAGE_TOKEN as a secret. Without them the meter says
+  // "not wired up". `keep_vars` below is what lets those dashboard values
+  // survive the next deploy from this file.
+  "keep_vars": true,
   /* ENVIRONMENTS. Bindings and vars are NOT inherited by an environment
      (wrangler's rule), so it binds the room again on purpose; `assets`
      and `migrations` are inherited. */
@@ -64,7 +62,7 @@
     /* STAGING: the same code as a second Worker, `<name>-staging`, at
        its own workers.dev address with its own Durable Object storage
        and NO still bucket, so a purge run on staging can never delete
-       real frames. The usage vars are left blank so /usage answers 501.
+       real frames. With no usage vars, /usage answers 501.
        Deploy with `npm run deploy:staging`; secrets are per environment
        (`wrangler secret put CORKO_PASSWORD --env staging`). It exists to
        walk the gate, the access map and the project flows on a blank
@@ -73,8 +71,7 @@
       "name": "corko-staging",
       "durable_objects": {
         "bindings": [{ "name": "CORKO_ROOM", "class_name": "CorkoRoom" }]
-      },
-      "vars": { "CORKO_ACCOUNT_ID": "", "CORKO_PLAN": "free" }
+      }
     }
   }
 }

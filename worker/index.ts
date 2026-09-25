@@ -14,6 +14,7 @@ import {
   parseAccess,
   projectsForPassword,
   randomSalt,
+  sameSecret,
   projectOfRoom,
   projectsOf,
   roomFor,
@@ -75,7 +76,20 @@ const PASSWORDS_KEY = "passwords"; // { [project]: pbkdf2 hex }
  * own, and the deployer could set any value anyway. The hash still does
  * the verifying. */
 const PLAIN_KEY = "passwords-plain"; // { [project]: password }
+/* THE ADMIN PASSWORD SET FROM INSIDE THE APP (2026-09-24): a "*" key,
+ * like CORKO_PASSWORD, kept as a hash ONLY -- unlike a team password
+ * there is no plaintext beside it and nothing can read it back. A fresh
+ * instance has none and no secrets, so it is open and reports `setup`;
+ * the first visitor sets one from the setup card, and from then on the
+ * gate is closed exactly as if the secret had been set. CORKO_PASSWORD
+ * still works beside it, which is the recovery: whoever owns the
+ * Cloudflare account can always set that secret. */
+const ADMIN_KEY = "admin"; // pbkdf2 hex, same salt as the team passwords
 const DIRECTORY_NAME = "directory";
+/* The shortest admin password the app or the route accepts. NOT
+ * exported: the Worker's entry module may export only handlers, and a
+ * plain value here stops the runtime from starting. */
+const ADMIN_MIN_LENGTH = 6;
 
 /* WHAT A PASSWORD OPENS, remembered for a minute in this isolate: the
  * gate runs on every still fetch, and a PBKDF2 derivation plus a
@@ -84,7 +98,33 @@ const DIRECTORY_NAME = "directory";
  * every few seconds. Cleared whenever a password changes. */
 const VERIFY_HIT_MS = 60_000;
 const VERIFY_MISS_MS = 5_000;
-const verified = new Map<string, { ids: string[]; at: number }>();
+const verified = new Map<string, { grant: Grant | null; at: number }>();
+/* WHETHER AN ADMIN PASSWORD HAS BEEN SET IN THE APP, remembered briefly
+ * per isolate: only asked when no secret configures the gate, and then on
+ * every request. A "set" answer is kept longer than an "unset" one, so
+ * a password set in another isolate closes this one's door within
+ * seconds. Keyed on the namespace binding, so a test's fresh env is a
+ * fresh answer. On an unreachable directory the gate fails CLOSED here:
+ * nothing else works without Durable Objects anyway, and failing open
+ * would expose an instance that has a password. */
+const ADMIN_SET_MS = 60_000;
+const ADMIN_UNSET_MS = 5_000;
+const adminSeen = new WeakMap<object, { set: boolean; at: number }>();
+async function adminIsSet(env: Env): Promise<boolean> {
+  const slot = env.CORKO_ROOM as unknown as object;
+  const now = Date.now();
+  const hit = adminSeen.get(slot);
+  if (hit && now - hit.at < (hit.set ? ADMIN_SET_MS : ADMIN_UNSET_MS)) return hit.set;
+  let set = true;
+  try {
+    const r = await directoryOf(env).fetch(new Request("https://room/admin"));
+    if (r.ok) set = ((await r.json()) as { set?: unknown }).set === true;
+  } catch {
+    /* unreachable: closed, per the header */
+  }
+  adminSeen.set(slot, { set, at: now });
+  return set;
+}
 const DAILY_SLACK_MS = 60 * 60 * 1000;
 
 export interface Env {
@@ -175,43 +215,57 @@ export interface AuthState {
    * grant was "*". Present only when `ok`. */
   projects?: string[];
   admin?: boolean;
+  /* No password of any kind yet: the app offers the admin setup card. */
+  setup?: boolean;
 }
 const directoryOf = (env: Env): DurableObjectStub =>
   env.CORKO_ROOM.get(env.CORKO_ROOM.idFromName(DIRECTORY_NAME));
 
-/* The projects a TEAM password opens, from the directory's hashes --
- * asked only when the access map did not answer. */
-async function registryProjects(env: Env, key: string): Promise<string[]> {
+/* What a key opens by the DIRECTORY's hashes -- the admin password set
+ * in the app ("*") or a team password (its projects) -- asked only when
+ * the access map did not answer. */
+async function directoryGrant(env: Env, key: string): Promise<Grant | null> {
   const now = Date.now();
   const hit = verified.get(key);
-  if (hit && now - hit.at < (hit.ids.length ? VERIFY_HIT_MS : VERIFY_MISS_MS)) return hit.ids;
-  let ids: string[] = [];
+  if (hit && now - hit.at < (hit.grant ? VERIFY_HIT_MS : VERIFY_MISS_MS)) return hit.grant;
+  let grant: Grant | null = null;
   try {
     const r = await directoryOf(env).fetch(
       new Request("https://room/verify", { method: "POST", body: JSON.stringify({ password: key }) }),
     );
-    if (r.ok) ids = ((await r.json()) as string[]).filter((x) => PROJECT_ID.test(x));
+    if (r.ok) {
+      const v = (await r.json()) as { admin?: unknown; ids?: unknown };
+      const ids = Array.isArray(v.ids) ? v.ids.filter((x): x is string => typeof x === "string" && PROJECT_ID.test(x)) : [];
+      grant = v.admin === true ? "*" : ids.length ? ids : null;
+    }
   } catch {
     /* the directory is unreachable: the map alone decides */
   }
-  verified.set(key, { ids, at: now });
-  return ids;
+  verified.set(key, { grant, at: now });
+  return grant;
+}
+
+/* Is there a gate at all? A secret configures one; so does an admin
+ * password set in the app. Neither = open, and the instance is waiting
+ * to be set up. */
+async function gated(env: Env): Promise<boolean> {
+  return !!parseAccess(env.CORKO_ACCESS, env.CORKO_PASSWORD) || (await adminIsSet(env));
 }
 
 /* The grant behind a key, or null: the map first (sync, the deployer's
- * tool), then the directory (a team password typed into the app). */
+ * tool), then the directory (the admin or a team password typed into
+ * the app). */
 async function grantOf(env: Env, key: string | null): Promise<Grant | null> {
+  if (!(await gated(env))) return "*";
   const map = parseAccess(env.CORKO_ACCESS, env.CORKO_PASSWORD);
-  if (!map) return "*";
-  const fromMap = grantFor(map, key);
+  const fromMap = map ? grantFor(map, key) : null;
   if (fromMap) return fromMap;
   if (!key) return null;
-  const ids = await registryProjects(env, key);
-  return ids.length ? ids : null;
+  return directoryGrant(env, key);
 }
 export async function authState(env: Env, key: string | null): Promise<AuthState> {
+  if (!(await gated(env))) return { required: false, ok: true, projects: [DEFAULT_PROJECT], admin: true, setup: true };
   const map = parseAccess(env.CORKO_ACCESS, env.CORKO_PASSWORD);
-  if (!map) return { required: false, ok: true, projects: [DEFAULT_PROJECT], admin: true };
   const grant = await grantOf(env, key);
   if (!grant) return { required: true, ok: false };
   return { required: true, ok: true, projects: projectsOf(map, grant), admin: grant === "*" };
@@ -378,13 +432,36 @@ export class CorkoRoom implements DurableObject {
         const plain = (await this.state.storage.get<Record<string, string>>(PLAIN_KEY)) ?? {};
         return Response.json({ ids: Object.keys(entries).sort(), plain });
       }
+      if (path === "/admin") {
+        if (req.method === "PUT") {
+          const body = (await req.json().catch(() => null)) as { password?: unknown } | null;
+          const password = typeof body?.password === "string" ? body.password : "";
+          if (password) {
+            let salt = await this.state.storage.get<string>(SALT_KEY);
+            if (!salt) {
+              salt = randomSalt();
+              await this.state.storage.put(SALT_KEY, salt);
+            }
+            await this.state.storage.put(ADMIN_KEY, await hashPassword(salt, password));
+          } else {
+            await this.state.storage.delete(ADMIN_KEY);
+          }
+          return new Response(null, { status: 204 });
+        }
+        return Response.json({ set: !!(await this.state.storage.get<string>(ADMIN_KEY)) });
+      }
       if (path === "/verify" && req.method === "POST") {
+        /* One derivation, then the admin hash and every team hash
+         * compared against it. */
         const body = (await req.json().catch(() => null)) as { password?: unknown } | null;
         const password = typeof body?.password === "string" ? body.password : "";
         const salt = await this.state.storage.get<string>(SALT_KEY);
         const entries = (await this.state.storage.get<Record<string, string>>(PASSWORDS_KEY)) ?? {};
-        const ids = salt ? await projectsForPassword(salt, entries, password) : [];
-        return Response.json(ids);
+        const adminHash = await this.state.storage.get<string>(ADMIN_KEY);
+        const h = salt && password ? await hashPassword(salt, password) : "";
+        const admin = !!h && !!adminHash && sameSecret(h, adminHash);
+        const ids = h ? await projectsForPassword(salt!, entries, password) : [];
+        return Response.json({ admin, ids });
       }
       if (path === "/registry") {
         const have = (await this.state.storage.get<string[]>(REGISTRY_KEY)) ?? [];
@@ -740,6 +817,34 @@ export default {
      * draws. Rooms are asked one by one -- a Durable Object namespace
      * cannot enumerate itself, so the set of projects IS the access map,
      * and each room answers for its own contents. */
+    /* THE ADMIN PASSWORD, set from the app: claimed from the setup card
+     * while the instance is open (anyone there is admin, which is what
+     * open means), then changed or cleared from Project settings by a
+     * "*" key. GET says whether one is set; nothing reads it back. */
+    if (url.pathname === "/admin/password") {
+      const state = await authState(env, key);
+      if (!state.ok) return new Response("unauthorized", { status: 401 });
+      if (!state.admin) return new Response("forbidden", { status: 403 });
+      if (req.method === "GET") {
+        return Response.json(
+          { set: await adminIsSet(env), secret: !!parseAccess(env.CORKO_ACCESS, env.CORKO_PASSWORD) },
+          { headers: { "cache-control": "no-store" } },
+        );
+      }
+      if (req.method === "PUT") {
+        const body = (await req.json().catch(() => null)) as { password?: unknown } | null;
+        const password = typeof body?.password === "string" ? body.password : "";
+        if (password && password.length < ADMIN_MIN_LENGTH) return new Response("too short", { status: 400 });
+        const r = await directoryOf(env).fetch(
+          new Request("https://room/admin", { method: "PUT", body: JSON.stringify({ password }) }),
+        );
+        verified.clear();
+        adminSeen.delete(env.CORKO_ROOM as unknown as object);
+        return new Response(null, { status: r.ok ? 204 : 500 });
+      }
+      return new Response("method not allowed", { status: 405 });
+    }
+
     /* A PROJECT'S TEAM PASSWORD, set or cleared from Project settings
      * (deployer only), and whether one is set. The password goes to the
      * directory, which hashes it; nothing here keeps it. */

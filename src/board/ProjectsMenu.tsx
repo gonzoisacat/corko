@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { ChevronDown, ChevronRight, Eye, EyeOff } from "lucide-react";
-import { accessInfo, clearKey, storedKey } from "../state/access";
+import { ADMIN_MIN_LENGTH, accessInfo, checkAccess, clearKey, putAdminPassword, storeKey, storedKey } from "../state/access";
+import { confirmDialog } from "../ui/confirmDialog";
 import { ops } from "../state/useBoard";
 import { projectId, slugify, stashTitle, switchProject } from "../state/project";
 
@@ -212,6 +213,10 @@ function NewProjectDialog({ onClose }: { onClose: () => void }) {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
+        /* A confirm raised FROM this dialog (Remove the Admin password)
+         * sits on top and owns the key: this capture listener hears it
+         * first, and used to close both. */
+        if (document.querySelector(".confirm-panel:not(.project-settings)")) return;
         e.preventDefault();
         e.stopPropagation();
         onClose();
@@ -364,6 +369,18 @@ function ProjectSettingsDialog({ title, admin, onClose }: { title: string; admin
   const [busy, setBusy] = useState(false);
   const [note, setNote] = useState("");
   const [copied, setCopied] = useState<"link" | "password" | null>(null);
+  /* THE ADMIN PASSWORD (2026-09-24): the "*" key set in the app, for the
+   * whole instance rather than this project -- here because this is the
+   * one dialog the admin already opens for passwords. Never read back:
+   * `adminSet` says only whether one exists, and `secret` whether a
+   * CORKO_PASSWORD / access map also gates the instance. */
+  const [adminOpen, setAdminOpen] = useState(false);
+  const [adminSet, setAdminSet] = useState<boolean | null>(null);
+  const [secret, setSecret] = useState(false);
+  const [adminPw, setAdminPw] = useState("");
+  const [adminAgain, setAdminAgain] = useState("");
+  const [adminShown, setAdminShown] = useState(false);
+  const [adminNote, setAdminNote] = useState("");
   const address = (() => {
     const u = new URL(location.href);
     u.search = projectId === "default" ? "" : `?p=${projectId}`;
@@ -374,6 +391,10 @@ function ProjectSettingsDialog({ title, admin, onClose }: { title: string; admin
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
+        /* A confirm raised FROM this dialog (Remove the Admin password)
+         * sits on top and owns the key: this capture listener hears it
+         * first, and used to close both. */
+        if (document.querySelector(".confirm-panel:not(.project-settings)")) return;
         e.preventDefault();
         e.stopPropagation();
         onClose();
@@ -420,6 +441,62 @@ function ProjectSettingsDialog({ title, admin, onClose }: { title: string; admin
     } finally {
       setBusy(false);
     }
+  };
+
+  useEffect(() => {
+    if (!admin || !adminOpen) return;
+    let dead = false;
+    fetch(keyed("/admin/password"), { cache: "no-store" })
+      .then((r) => (r.ok ? r.json() : Promise.reject(r.status)))
+      .then((v: { set: boolean; secret: boolean }) => {
+        if (dead) return;
+        setAdminSet(v.set);
+        setSecret(v.secret);
+      })
+      .catch(() => {
+        if (!dead) setAdminSet(null);
+      });
+    return () => {
+      dead = true;
+    };
+  }, [admin, adminOpen]);
+
+  const setAdmin = async () => {
+    if (busy) return;
+    if (adminPw.length < ADMIN_MIN_LENGTH) return setAdminNote(`Use at least ${ADMIN_MIN_LENGTH} characters.`);
+    if (adminPw !== adminAgain) return setAdminNote("The two passwords don't match.");
+    setBusy(true);
+    const status = await putAdminPassword(adminPw);
+    setBusy(false);
+    if (status !== 204) return setAdminNote("The server did not take it. Check your connection.");
+    /* the new password opens everything, so this browser keeps it */
+    storeKey(adminPw);
+    setAdminSet(true);
+    setAdminPw("");
+    setAdminAgain("");
+    setAdminNote("Admin password set.");
+  };
+
+  const removeAdmin = async () => {
+    if (busy) return;
+    const ok = await confirmDialog.ask({
+      title: "Remove the Admin password?",
+      body: secret
+        ? "The password set in your Cloudflare account still protects this Corko."
+        : "Anyone with a link will be able to open this Corko until a new one is set.",
+      confirmLabel: "Remove",
+    });
+    if (!ok) return;
+    setBusy(true);
+    const status = await putAdminPassword("");
+    setBusy(false);
+    if (status !== 204) return setAdminNote("The server did not take it. Check your connection.");
+    setAdminSet(false);
+    setAdminNote("Admin password removed.");
+    /* If this browser was in on that password and a secret still gates
+     * the instance, it is now locked out: go to the password screen. */
+    const a = await checkAccess();
+    if (!a.ok) location.reload();
   };
 
   const copy = (what: "link" | "password", text: string) => {
@@ -558,6 +635,89 @@ function ProjectSettingsDialog({ title, admin, onClose }: { title: string; admin
               ) : (
                 <div className="project-slug-line">Sharing is set by whoever runs this Corko.</div>
               )}
+            </div>
+          )}
+
+          {admin && (
+            <button
+              className="options-group mono project-section-toggle"
+              aria-expanded={adminOpen}
+              onClick={() => setAdminOpen((o) => !o)}
+            >
+              {adminOpen ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
+              Admin password
+            </button>
+          )}
+          {admin && adminOpen && (
+            <div className="project-sharing">
+              <div className="project-slug-line">
+                {adminSet === null
+                  ? "Checking..."
+                  : adminSet
+                    ? "An Admin password is set. It opens every project in this Corko."
+                    : secret
+                      ? "No Admin password is set here. The password set in your Cloudflare account protects this Corko."
+                      : "No Admin password is set. Anyone with a link can open this Corko."}
+              </div>
+              <div className="project-password-row">
+                <span className="project-password-field">
+                  <input
+                    className="gate-input project-name-input"
+                    type={adminShown ? "text" : "password"}
+                    value={adminPw}
+                    placeholder={adminSet ? "New Admin password" : "Admin password"}
+                    aria-label="New Admin password"
+                    autoComplete="new-password"
+                    onChange={(e) => {
+                      setAdminPw(e.target.value);
+                      setAdminNote("");
+                    }}
+                  />
+                  <button
+                    className="project-eye"
+                    aria-label={adminShown ? "Hide password" : "Show password"}
+                    data-tip={adminShown ? "Hide" : "Show"}
+                    onClick={() => setAdminShown((v) => !v)}
+                  >
+                    {adminShown ? <EyeOff size={14} /> : <Eye size={14} />}
+                  </button>
+                </span>
+              </div>
+              <div className="project-password-row">
+                <span className="project-password-field">
+                  <input
+                    className="gate-input project-name-input"
+                    type={adminShown ? "text" : "password"}
+                    value={adminAgain}
+                    placeholder="Confirm password"
+                    aria-label="Confirm Admin password"
+                    autoComplete="new-password"
+                    onChange={(e) => {
+                      setAdminAgain(e.target.value);
+                      setAdminNote("");
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && adminPw && adminAgain) {
+                        e.preventDefault();
+                        void setAdmin();
+                      }
+                    }}
+                  />
+                </span>
+                <button
+                  className="confirm-btn"
+                  disabled={busy || adminSet === null || !adminPw || !adminAgain}
+                  onClick={() => void setAdmin()}
+                >
+                  {adminSet ? "Change" : "Set"}
+                </button>
+                {adminSet && (
+                  <button className="confirm-btn" disabled={busy} onClick={() => void removeAdmin()}>
+                    Remove
+                  </button>
+                )}
+              </div>
+              {adminNote && <div className="project-slug-line">{adminNote}</div>}
             </div>
           )}
         </div>

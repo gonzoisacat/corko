@@ -23,6 +23,7 @@ function mockEnv(password?: string, access?: Record<string, string[] | "*">): { 
   const registry: string[] = [];
   const passwords: Record<string, string> = {};
   const plain: Record<string, string> = {};
+  let adminHash = "";
   const salt = "test-salt";
   const env = {
     CORKO_PASSWORD: password,
@@ -44,9 +45,18 @@ function mockEnv(password?: string, access?: Record<string, string[] | "*">): { 
             return new Response(null, { status: 204 });
           }
           if (path === "/passwords") return Response.json({ ids: Object.keys(passwords).sort(), plain });
+          if (path === "/admin") {
+            if (r.method === "PUT") {
+              const { password } = (await r.json()) as { password: string };
+              adminHash = password ? await hashPassword(salt, password) : "";
+              return new Response(null, { status: 204 });
+            }
+            return Response.json({ set: !!adminHash });
+          }
           if (path === "/verify") {
             const { password } = (await r.json()) as { password: string };
-            return Response.json(await projectsForPassword(salt, passwords, password));
+            const admin = !!password && !!adminHash && (await hashPassword(salt, password)) === adminHash;
+            return Response.json({ admin, ids: await projectsForPassword(salt, passwords, password) });
           }
           if (path === "/registry") {
             if (r.method === "POST") {
@@ -80,8 +90,9 @@ const req = (path: string) => new Request(`https://corko.example${path}`);
 describe("authState", () => {
   it("fails open ONLY when no password is configured", async () => {
     const open = { env: mockEnv().env };
-    expect(await authState(open.env, null)).toEqual({ required: false, ok: true, projects: ["default"], admin: true });
-    expect(await authState(open.env, "anything")).toEqual({ required: false, ok: true, projects: ["default"], admin: true });
+    const openState = { required: false, ok: true, projects: ["default"], admin: true, setup: true };
+    expect(await authState(open.env, null)).toEqual(openState);
+    expect(await authState(open.env, "anything")).toEqual(openState);
   });
 
   it("requires an exact match once a password is set", async () => {
@@ -107,7 +118,7 @@ describe("routing", () => {
     const { env } = mockEnv();
     const res = await worker.fetch(req("/auth"), env);
     expect(res.status).toBe(200);
-    expect(await res.json()).toEqual({ required: false, ok: true, projects: ["default"], admin: true });
+    expect(await res.json()).toEqual({ required: false, ok: true, projects: ["default"], admin: true, setup: true });
   });
 
   it("/auth distinguishes wrong password from right", async () => {
@@ -548,5 +559,87 @@ describe("team passwords", () => {
     expect(a).toHaveLength(64);
     expect(await projectsForPassword("s1", { acme: a, other: b }, "pw")).toEqual(["acme"]);
     expect(await projectsForPassword("s1", { acme: a }, "")).toEqual([]);
+  });
+});
+
+describe("the admin password set in the app", () => {
+  const putAdmin = (env: Env, k: string, password: string) =>
+    worker.fetch(
+      new Request(`https://corko.example/admin/password?k=${encodeURIComponent(k)}`, {
+        method: "PUT",
+        body: JSON.stringify({ password }),
+      }),
+      env,
+    );
+  const auth = async (env: Env, k: string) => (await worker.fetch(req(`/auth?k=${encodeURIComponent(k)}`), env)).json();
+
+  it("a fresh instance is open and says it is waiting to be set up", async () => {
+    const { env } = mockEnv();
+    expect(await auth(env, "")).toEqual({ required: false, ok: true, projects: ["default"], admin: true, setup: true });
+  });
+
+  it("the first visitor sets it, and from then on the gate is closed like a secret's", async () => {
+    const { env } = mockEnv();
+    expect((await putAdmin(env, "", "claim-pass-1")).status).toBe(204);
+    expect(await auth(env, "")).toEqual({ required: true, ok: false });
+    expect(await auth(env, "claim-pass-1")).toEqual({ required: true, ok: true, projects: ["default"], admin: true });
+    expect((await worker.fetch(req("/sync/corko-default"), env)).status).toBe(401);
+    expect((await worker.fetch(req("/sync/corko-default?k=claim-pass-1"), env)).status).toBe(200);
+  });
+
+  it("once set, nobody else can claim it again", async () => {
+    const { env } = mockEnv();
+    await putAdmin(env, "", "claim-pass-2");
+    expect((await putAdmin(env, "", "someone-else")).status).toBe(401);
+    expect((await putAdmin(env, "wrong-key", "someone-else")).status).toBe(401);
+    expect(await auth(env, "someone-else")).toEqual({ required: true, ok: false });
+  });
+
+  it("refuses one shorter than six characters", async () => {
+    const { env } = mockEnv();
+    expect((await putAdmin(env, "", "short")).status).toBe(400);
+    expect(await auth(env, "")).toMatchObject({ required: false, setup: true });
+  });
+
+  it("the admin can change it, and clearing it opens the instance again", async () => {
+    const { env } = mockEnv();
+    await putAdmin(env, "", "claim-pass-3");
+    expect((await putAdmin(env, "claim-pass-3", "claim-pass-4")).status).toBe(204);
+    expect(await auth(env, "claim-pass-3")).toEqual({ required: true, ok: false });
+    expect(await auth(env, "claim-pass-4")).toMatchObject({ ok: true, admin: true });
+    expect((await putAdmin(env, "claim-pass-4", "")).status).toBe(204);
+    expect(await auth(env, "")).toMatchObject({ required: false, setup: true });
+  });
+
+  it("a team password only opens its project, even on an instance gated only by the app", async () => {
+    const { env } = mockEnv();
+    await putAdmin(env, "", "claim-pass-5");
+    const r = await worker.fetch(
+      new Request("https://corko.example/projects/acme/password?k=claim-pass-5", {
+        method: "PUT",
+        body: JSON.stringify({ password: "acme-crew-5" }),
+      }),
+      env,
+    );
+    expect(r.status).toBe(204);
+    expect(await auth(env, "acme-crew-5")).toEqual({ required: true, ok: true, projects: ["acme"], admin: false });
+    expect((await putAdmin(env, "acme-crew-5", "takeover")).status).toBe(403);
+  });
+
+  it("CORKO_PASSWORD still opens everything beside it -- the recovery", async () => {
+    const { env } = mockEnv("recovery-secret");
+    expect(await auth(env, "recovery-secret")).toMatchObject({ ok: true, admin: true });
+    expect((await putAdmin(env, "recovery-secret", "claim-pass-6")).status).toBe(204);
+    expect(await auth(env, "claim-pass-6")).toMatchObject({ ok: true, admin: true });
+    expect(await auth(env, "recovery-secret")).toMatchObject({ ok: true, admin: true });
+    expect(await auth(env, "")).toEqual({ required: true, ok: false });
+  });
+
+  it("GET says whether one is set, to the admin only, and never returns it", async () => {
+    const { env } = mockEnv();
+    await putAdmin(env, "", "claim-pass-7");
+    expect((await worker.fetch(req("/admin/password"), env)).status).toBe(401);
+    const v = await (await worker.fetch(req("/admin/password?k=claim-pass-7"), env)).json();
+    expect(v).toEqual({ set: true, secret: false });
   });
 });

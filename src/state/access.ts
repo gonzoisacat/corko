@@ -37,6 +37,47 @@ export interface AccessState {
    * whether the grant was "*" -- the deployer. Present only when ok. */
   projects?: string[];
   admin?: boolean;
+  /* No password of any kind yet (worker/index.ts): the instance is open
+   * and waiting for its Admin password, which the setup card sets. */
+  setup?: boolean;
+}
+
+/* The shortest Admin password the server takes (ADMIN_MIN_LENGTH in
+ * worker/index.ts, which is the one that counts). */
+export const ADMIN_MIN_LENGTH = 6;
+
+/* "Skip for now" on the setup card, remembered for THIS browser only:
+ * everyone else who opens an unset instance still sees the card, which
+ * is what tells them to ask the person who sent the link. */
+const SKIP_KEY = "corko-admin-setup-skipped";
+export function setupSkipped(): boolean {
+  try {
+    return localStorage.getItem(SKIP_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+export function skipSetup(): void {
+  try {
+    localStorage.setItem(SKIP_KEY, "1");
+  } catch {
+    /* storage disabled: the card comes back next load, which is harmless */
+  }
+}
+
+/* Set, change or (with "") remove the Admin password. The status is the
+ * answer: 204 done, 400 too short, 401/403 not allowed -- which on the
+ * setup card means somebody set one first -- 0 no server. */
+export async function putAdminPassword(password: string, key = storedKey()): Promise<number> {
+  try {
+    const r = await fetch(`/admin/password?k=${encodeURIComponent(key)}`, {
+      method: "PUT",
+      body: JSON.stringify({ password }),
+    });
+    return r.status;
+  } catch {
+    return 0;
+  }
 }
 
 /* The last answer /auth gave, for the topbar's project switcher. */
