@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- THE COORDINATED-RELOAD COUNTER (2026-09-10). Bump it in the
+         same commit as any doc-shape change, and every tab still
+         running an older bundle turns its build light RED -- because
+         an old bundle's writes into a new shape are the one thing a
+         person cannot see going wrong. An ordinary deploy leaves it
+         alone. state/buildWatch.ts reads it from here, on both sides
+         of the comparison; CLAUDE.md's deploy section is where the
+         rule lives. -->
+    <meta name="corko-build-epoch" content="1" />
+    <!-- The mark itself, as an SVG so it stays crisp at every tab size
+         and needs no bitmap. It is the CLASSIC colorway on purpose: the
+         splash and the topbar logo can wear any of the eighteen looks,
+         but a browser tab is an identity rather than a mood, so it must
+         not change under the reader. Generated from the same 6x6 GRID
+         in ui/CorkoMark.tsx -- if that shape ever changes, regenerate
+         this to match. The C sits in a half-cell of board on every side
+         (owner, 2026-08-30) so it does not run edge to edge at tab
+         size: ~1.4px of margin at 16px, where it had 0.35. -->
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <title>Corko -- Beat Board</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

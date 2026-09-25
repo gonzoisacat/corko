@@ -1,0 +1,13 @@
+cork.jpg / wood_0021_roughness_1k.jpg
+  Source:  "Wood Cork Board (Wood 0021)" -- a free PBR CG texture library
+  License: CC0 (public domain) -- no attribution required, free to redistribute
+  Use:     cork.jpg is the photo backdrop for the "cork" background option;
+           the roughness map (grayscale, mid-gray centered) is blended over
+           the pick-your-own flat color via background-blend-mode: overlay
+           for the "Cork grain" toggle. The pack's other maps (height,
+           normals, AO) were dropped from the repo -- they are heavy and
+           unused; re-download the pack if they are ever needed.
+
+CC0 imposes no obligations; this note is recorded only for provenance.
+If you replace these textures, keep them CC0 / redistributable since Corko
+is open-source and self-deployable.

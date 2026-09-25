@@ -1,0 +1,80 @@
+{
+  // Corko's deploy config, replacing partykit.json (2026-08-01).
+  //
+  // Three lines here are the entire reason this migration happened:
+  //
+  //  - `new_sqlite_classes` -- Cloudflare's FREE plan only allows
+  //    SQLite-backed Durable Objects. PartyKit's deploy service emits the
+  //    older `new_classes` form and can't be told otherwise (the migration
+  //    is built server-side, not by its CLI), so it simply cannot deploy
+  //    here without a paid plan.
+  //  - `assets` -- Workers Assets serves the built app straight from the
+  //    Worker. PartyKit's cloud-prem needs an R2 bucket for this, and R2
+  //    requires a card on file even on its free tier. This needs neither.
+  //  - `not_found_handling` -- the app is a single page; unknown paths must
+  //    return index.html rather than a 404, or a deep link breaks.
+  //
+  // THE TOP LEVEL IS A STRANGER'S DEFAULT (2026-09-21): what `npm run
+  // deploy` deploys from a fresh clone on a free Cloudflare account,
+  // with nothing to create first. No still bucket, no account id, the
+  // free plan's limits table. Everything optional is switched on by
+  // adding to THIS block, and docs/deploy.md says how. (The maintainer's
+  // own instance is a separate config file that is not published.)
+  //
+  // No custom domain is set: a Worker gets a free, permanent
+  // <name>.<subdomain>.workers.dev URL. Add "routes" here later to put it
+  // on your own domain; nothing else needs to change.
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "corko",
+  "main": "worker/index.ts",
+  "compatibility_date": "2026-07-01",
+  "assets": {
+    "directory": "./dist",
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application"
+  },
+  "durable_objects": {
+    "bindings": [{ "name": "CORKO_ROOM", "class_name": "CorkoRoom" }]
+  },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["CorkoRoom"] }],
+  "observability": { "enabled": true },
+  // SHARED STILLS (optional, docs/deploy.md step 6). Without a bucket
+  // the /still routes answer 501 and every client keeps its frames in
+  // its own IndexedDB, which is Phase B and works. To share them, create
+  // the bucket (`npx wrangler r2 bucket create corko-stills`; R2 wants a
+  // card on file even on its free tier) and uncomment:
+  // "r2_buckets": [{ "binding": "CORKO_STILLS", "bucket_name": "corko-stills" }],
+  //
+  // USAGE METERS (optional, docs/deploy.md step 7; worker/usage.ts).
+  // Neither of these is a secret: the account id is in every dashboard
+  // URL and grants nothing without a token, and the plan just picks
+  // which limits table the meters read against ("free" = the daily
+  // cliffs, "paid" = the monthly included allowances). The token that
+  // actually reads the numbers is CORKO_USAGE_TOKEN, a secret -- see
+  // worker/index.ts Env. Put YOUR account id here (dashboard URL, or
+  // `npx wrangler whoami`); without one the meter says "not wired up".
+  "vars": {
+    "CORKO_ACCOUNT_ID": "",
+    "CORKO_PLAN": "free"
+  },
+  /* ENVIRONMENTS. Bindings and vars are NOT inherited by an environment
+     (wrangler's rule), so it binds the room again on purpose; `assets`
+     and `migrations` are inherited. */
+  "env": {
+    /* STAGING: the same code as a second Worker, `<name>-staging`, at
+       its own workers.dev address with its own Durable Object storage
+       and NO still bucket, so a purge run on staging can never delete
+       real frames. The usage vars are left blank so /usage answers 501.
+       Deploy with `npm run deploy:staging`; secrets are per environment
+       (`wrangler secret put CORKO_PASSWORD --env staging`). It exists to
+       walk the gate, the access map and the project flows on a blank
+       slate before doing any of it for real. */
+    "staging": {
+      "name": "corko-staging",
+      "durable_objects": {
+        "bindings": [{ "name": "CORKO_ROOM", "class_name": "CorkoRoom" }]
+      },
+      "vars": { "CORKO_ACCOUNT_ID": "", "CORKO_PLAN": "free" }
+    }
+  }
+}

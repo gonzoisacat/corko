@@ -1,0 +1,27 @@
+{
+  // The sync Worker was in NO tsconfig until 2026-08-01: `tsc -b` checked
+  // src and vite.config.ts, and wrangler bundles with esbuild, which
+  // strips types without checking them. So `npm run build` being green
+  // said nothing about worker/index.ts -- the least-reviewed file in the
+  // repo was also the only unchecked one. This project closes that gap;
+  // it is referenced from tsconfig.json so `npm run typecheck` covers it.
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022"],
+    "types": ["@cloudflare/workers-types"],
+    "module": "ESNext",
+    "skipLibCheck": true,
+
+    "moduleResolution": "Bundler",
+    "isolatedModules": true,
+    "moduleDetection": "force",
+    "noEmit": true,
+
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+
+    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.worker.tsbuildinfo"
+  },
+  "include": ["worker"]
+}

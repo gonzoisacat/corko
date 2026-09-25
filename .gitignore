@@ -1,0 +1,34 @@
+node_modules
+dist
+dist-ssr
+*.local
+.DS_Store
+
+# Local server state -- build caches AND the simulated Durable Object
+# storage, i.e. whatever board you happened to make while developing.
+# These are real SQLite databases with real board content in them; never
+# commit either. (.partykit is dead but its 13MB of state is still on disk
+# until you delete it, and it must stay ignored while it is.)
+.wrangler
+.partykit
+
+# Cloudflare deploy credentials (account id + API token). Never committed,
+# never baked into a build -- it is read at DEPLOY time only, by the shell,
+# and no app code ever sees it. Unlike VITE_* vars, which DO end up in the
+# bundle, this file must stay out of both.
+.cf-deploy.env
+
+# wrangler dev's local secrets (e.g. a test CORKO_PASSWORD). Same rule as
+# .cf-deploy.env: never committed, never in a build.
+.dev.vars
+
+# editor
+.vscode/*
+!.vscode/extensions.json
+.idea
+
+# logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*

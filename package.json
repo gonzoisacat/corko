@@ -1,0 +1,51 @@
+{
+  "name": "corko",
+  "private": true,
+  "version": "0.9.2",
+  "type": "module",
+  "description": "Corko -- a collaborative beat-boarding app for documentary editing (Phase 0 + Phase 1).",
+  "license": "AGPL-3.0-or-later",
+  "scripts": {
+    "postinstall": "patch-package",
+    "dev": "concurrently -n web,worker -c cyan,magenta \"vite\" \"wrangler dev\"",
+    "dev:live": "concurrently -n web,worker -c cyan,magenta \"vite\" \"wrangler dev --config wrangler.live.jsonc\"",
+    "dev:web": "vite",
+    "build": "tsc -b && vite build",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "typecheck": "tsc -b --noEmit",
+    "deploy": "npm run build && wrangler deploy --env ''",
+    "dev:worker": "wrangler dev",
+    "deploy:live": "npm run build && wrangler deploy --config wrangler.live.jsonc",
+    "deploy:live:worker": "wrangler deploy --config wrangler.live.jsonc",
+    "publish": "node scripts/publish.mjs",
+    "verify:sync": "node scripts/verify-sync.mjs",
+    "deploy:staging": "npm run build && wrangler deploy --env staging"
+  },
+  "dependencies": {
+    "lucide-react": "^0.462.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "virtua": "^0.39.0",
+    "y-indexeddb": "^9.0.12",
+    "y-protocols": "^1.0.7",
+    "y-websocket": "^3.0.0",
+    "yjs": "^13.6.20"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^5.20260801.1",
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
+    "@types/ws": "^8.18.1",
+    "@vitejs/plugin-react": "^4.3.4",
+    "concurrently": "^10.0.4",
+    "fake-indexeddb": "^6.2.5",
+    "patch-package": "^8.0.1",
+    "postinstall-postinstall": "^2.1.0",
+    "typescript": "^5.6.3",
+    "vite": "^5.4.11",
+    "vitest": "^4.1.10",
+    "wrangler": "^4.118.0",
+    "ws": "^8.21.1"
+  }
+}

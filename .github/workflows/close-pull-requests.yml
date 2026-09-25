@@ -1,0 +1,23 @@
+# Pull requests are closed on arrival. CONTRIBUTING.md says why: this
+# repo takes suggestions as ISSUES and merges no outside code, so the
+# maintainer stays the sole copyright holder. GitHub cannot switch pull
+# requests off on a public repo, so this does the next best thing.
+# `pull_request_target` runs with the base repo's token and never
+# checks out the pull request's code.
+name: Close pull requests
+on:
+  pull_request_target:
+    types: [opened, reopened]
+permissions:
+  pull-requests: write
+jobs:
+  close:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Close with a note
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          gh pr close "$NUMBER" --comment "Thanks for taking the time. This repo does not merge pull requests (see CONTRIBUTING.md), so this one is closed automatically. If it fixes or improves something, please open an issue describing the change and it will be considered for a release."
