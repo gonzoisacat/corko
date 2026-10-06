@@ -15,6 +15,17 @@ release it is:
 
 Versions stay below 1.0 until user accounts exist (spec Phase 7).
 
+## 0.9.6 -- 2026-10-06 -- ordinary (epoch 1)
+
+- **An update notice for admins** in the top bar, left of the deploy
+  light: a quiet "Corko 0.9.5" with this instance's version, and a blue
+  "Update" pill when a newer Corko release is out. Its panel says what changed, whether everyone must
+  reload together, how to update, and opens the usage meters. Nobody
+  else sees it; an admin's browser checks GitHub at most every six
+  hours.
+- **Playback speed in the Player**: a gauge button beside the duration
+  opens a 0.25x-2x slider, remembered per board.
+
 ## 0.9.5 -- 2026-09-25 -- ordinary (epoch 1)
 
 - Update Corko no longer asks you to copy in a workflow file your copy

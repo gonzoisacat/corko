@@ -58,6 +58,7 @@ import {
 } from "./board/TemplatePicker";
 import { LandingPicker } from "./board/LandingPicker";
 import { BuildStatus } from "./board/BuildStatus";
+import { ReleaseStatus } from "./board/ReleaseStatus";
 import { TcCalcButton, TcCalcPopover } from "./board/TcCalcPopover";
 import { OpenBoardDoor } from "./board/OpenBoardDoor";
 import { useIsDragging } from "./board/drag";
@@ -676,6 +677,9 @@ export default function App() {
               placement, "next to the dark mode UI") */}
           <TcCalcButton />
           <ThemeToggle boardId="" />
+          {/* is this INSTANCE on the newest release -- the admin's light
+              (owner, 2026-10-05), left of the deploy light in its idiom */}
+          <ReleaseStatus onUsage={() => setUsageOpen(true)} />
           {/* is this tab running the deployed build (owner, 2026-09-10);
               his order -- theme switch, reload, light, label, divider,
               then the sync note that was already here */}

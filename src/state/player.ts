@@ -78,6 +78,11 @@ export interface PlayerPrefs {
   still: boolean;
   /* the tag strip at the foot of the panel, rolled up or not */
   tagsOpen: boolean;
+  /* PLAYBACK SPEED (owner, 2026-10-05: ".9, 1.25, 1.5, 2x etc"), a
+   * multiple of real time from SPEED_MIN to SPEED_MAX in SPEED_STEP --
+   * per board per browser like the rest of the knobs, since a fast
+   * review pass is a habit of a desk, not a fact about the cut. */
+  speed: number;
 }
 
 export const DEFAULT_PLAYER_PREFS: PlayerPrefs = {
@@ -90,7 +95,24 @@ export const DEFAULT_PLAYER_PREFS: PlayerPrefs = {
   stampRuntime: true,
   still: true,
   tagsOpen: true,
+  speed: 1,
 };
+
+export const SPEED_MIN = 0.25;
+export const SPEED_MAX = 2;
+export const SPEED_STEP = 0.05;
+
+/* Any number, made a speed the slider can show: clamped, then on the
+ * step grid (so 0.9 stays 0.9 and not 0.8999999). Not a number is 1x. */
+export function clampSpeed(v: unknown): number {
+  const n = typeof v === "number" && Number.isFinite(v) ? v : 1;
+  const c = Math.min(SPEED_MAX, Math.max(SPEED_MIN, n));
+  const onGrid = Math.round(c / SPEED_STEP) * SPEED_STEP;
+  return Math.round(onGrid * 100) / 100;
+}
+
+/* "1x", "0.9x", "1.25x" -- no trailing zeros. */
+export const formatSpeed = (v: number): string => `${Number(v.toFixed(2))}x`;
 
 /* The start, in frames, or 0 when the box holds nothing parseable -- a
  * bad start must not stop a capture, only un-offset it. */

@@ -1,9 +1,15 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
+import { readFileSync } from "node:fs";
+
+/* This build's release version, for the admin's update light
+ * (state/releaseWatch.ts). package.json is the one place it lives. */
+const VERSION = JSON.parse(readFileSync(new URL("./package.json", import.meta.url), "utf8")).version as string;
 
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [react()],
+  define: { __CORKO_VERSION__: JSON.stringify(VERSION) },
   // Yjs must be a single instance across the app and the sync provider
   // (y-websocket depends on yjs too). Two copies break instanceof checks
   // -- see yjs#438. Dedupe forces one.

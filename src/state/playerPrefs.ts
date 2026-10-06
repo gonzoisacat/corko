@@ -1,5 +1,5 @@
 import { useSyncExternalStore } from "react";
-import { DEFAULT_PLAYER_PREFS, type PlayerPrefs } from "./player";
+import { DEFAULT_PLAYER_PREFS, clampSpeed, type PlayerPrefs } from "./player";
 import { scoped } from "./project";
 
 /* ------------------------------------------------------------------ *
@@ -46,6 +46,7 @@ function normalize(p: Partial<PlayerPrefs> | undefined): PlayerPrefs {
     stampRuntime: p?.stampRuntime !== false,
     still: p?.still !== false,
     tagsOpen: p?.tagsOpen !== false,
+    speed: clampSpeed(p?.speed),
   };
 }
 

@@ -12,6 +12,7 @@
 
 import { ops, getSnapshot } from "../state/ydoc";
 import { buildWatch } from "../state/buildWatch";
+import { releaseWatch } from "../state/releaseWatch";
 
 const name = (el: Element): string =>
   (typeof el.className === "string" ? el.className.split(" ")[0] : "") || el.tagName;
@@ -264,6 +265,10 @@ function darkAudit(): { openNow: string[]; lightSurfaces: string[]; unreadableTe
        too; named so a report says WHICH menu was open) */
     ".overrides-menu",
     ".note-state-menu",
+    /* the admin's update panel (board/ReleaseStatus.tsx) and the
+       player's speed slider (board/PlayerSpeed.tsx), 2026-10-05 */
+    ".release-pop",
+    ".player-speed-pop",
   ].filter((sel) => document.querySelector(sel));
 
   return { openNow, lightSurfaces: [...lightSurfaces], unreadableText: [...unreadableText] };
@@ -296,11 +301,11 @@ function darkAudit(): { openNow: string[]; lightSurfaces: string[]; unreadableTe
 export function installLayoutDoctor(): void {
   /* `build` drives the deploy light (state/buildWatch.ts) so its three
    * faces can be looked at without deploying twice: corko.build("update"). */
-  const api = { doctor: report, zoneAt, darkAudit, build: buildWatch.force, ops, snap: getSnapshot };
+  const api = { doctor: report, zoneAt, darkAudit, build: buildWatch.force, release: releaseWatch.force, ops, snap: getSnapshot };
   (window as unknown as { corko: typeof api }).corko = api;
   // eslint-disable-next-line no-console
   console.info(
-    "corko.doctor() / corko.zoneAt(x, y) / corko.darkAudit() / corko.build(state) -- diagnostics (dev only).\n" +
+    "corko.doctor() / corko.zoneAt(x, y) / corko.darkAudit() / corko.build(state) / corko.release(version, coordinated?) -- diagnostics (dev only).\n" +
       "darkAudit only sees what is OPEN: open your menus and panels first.\n" +
       "corko.ops / corko.snap() -- the APP's doc. Use these, never a fresh " +
       "import(): after an edit, importing a store re-evaluates it and you get " +

@@ -7,6 +7,9 @@ interface ImportMetaEnv {
    * Falls back to 127.0.0.1:8787 when unset in dev. */
   readonly VITE_SYNC_HOST?: string;
 }
+/* package.json's version, written in at build time (vite.config.ts). */
+declare const __CORKO_VERSION__: string;
+
 interface ImportMeta {
   readonly env: ImportMetaEnv;
 }

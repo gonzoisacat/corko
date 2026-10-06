@@ -28,6 +28,7 @@ import { setPlayerPref, usePlayerPrefs } from "../state/playerPrefs";
 import type { Board } from "../state/types";
 import { captureFrame } from "./stills";
 import { applyCapture, writeCapture } from "./capture";
+import { PlayerSpeed } from "./PlayerSpeed";
 import { useSelectionIds } from "./selection";
 import { TagSwatch } from "./TagSwatch";
 import { tagPanel } from "./tagPanel";
@@ -103,6 +104,18 @@ export function PlayerPanel({
   const selId = selected.length === 1 ? selected[0] : null;
   const selNode = useNode(bid || null, selId);
   const canApply = !!selNode;
+
+  /* THE SPEED rides on the element, which forgets it whenever its
+   * source changes -- so it is written on every load as well as on
+   * every change (PlayerSpeed.tsx). `defaultPlaybackRate` too, so a
+   * media reset inside the browser lands on the same speed. */
+  const applySpeed = useCallback(() => {
+    const el = videoRef.current;
+    if (!el) return;
+    el.defaultPlaybackRate = prefs.speed;
+    el.playbackRate = prefs.speed;
+  }, [prefs.speed]);
+  useEffect(applySpeed, [applySpeed, url]);
 
   /* an object URL per file, revoked when the file goes */
   useEffect(() => {
@@ -358,7 +371,10 @@ export function PlayerPanel({
             onTimeUpdate={(e) => setTime(e.currentTarget.currentTime)}
             onSeeked={(e) => setTime(e.currentTarget.currentTime)}
             /* a recorded stream can say Infinity; the scrub needs a number */
-            onLoadedMetadata={(e) => setDuration(Number.isFinite(e.currentTarget.duration) ? e.currentTarget.duration : 0)}
+            onLoadedMetadata={(e) => {
+              setDuration(Number.isFinite(e.currentTarget.duration) ? e.currentTarget.duration : 0);
+              applySpeed();
+            }}
             onDurationChange={(e) => setDuration(Number.isFinite(e.currentTarget.duration) ? e.currentTarget.duration : 0)}
             onError={() =>
               setError(
@@ -471,7 +487,13 @@ export function PlayerPanel({
             <SkipForward size={12} />
           </button>
           <span className="pane-bar-spacer" />
-          <span className="player-dur mono">{formatRuntime(duration)}</span>
+          {/* speed, anchored to the duration's left (his placement): one
+              group, so the button hugs the text rather than the box the
+              text is right-aligned in */}
+          <span className="player-dur-group">
+            <PlayerSpeed value={prefs.speed} onChange={(v) => setPlayerPref(bid, "speed", v)} disabled={!url} />
+            <span className="player-dur mono">{formatRuntime(duration)}</span>
+          </span>
         </div>
       </div>
 

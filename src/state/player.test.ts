@@ -100,3 +100,19 @@ describe("the stamp field names", () => {
     expect(PLAYHEAD_FIELD).not.toBe(TIMECODE_FIELD);
   });
 });
+
+describe("playback speed", () => {
+  it("clamps to the slider's range and lands on its step grid", async () => {
+    const { clampSpeed, formatSpeed } = await import("./player");
+    expect(clampSpeed(0.9)).toBe(0.9);
+    expect(clampSpeed(0.8999999)).toBe(0.9);
+    expect(clampSpeed(1.27)).toBe(1.25);
+    expect(clampSpeed(5)).toBe(2);
+    expect(clampSpeed(0)).toBe(0.25);
+    expect(clampSpeed("fast")).toBe(1);
+    expect(clampSpeed(undefined)).toBe(1);
+    expect(formatSpeed(1)).toBe("1x");
+    expect(formatSpeed(0.9)).toBe("0.9x");
+    expect(formatSpeed(1.25)).toBe("1.25x");
+  });
+});
