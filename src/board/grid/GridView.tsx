@@ -893,6 +893,16 @@ export function GridView({
           window wider than the sheet. */}
       <div
         className="grid-window"
+        /* NO BROWSER DRAG EVER STARTS ON THE GRID (owner's report,
+         * 2026-10-18: with seven cards selected, a drag turned "every card
+         * on the board" into a ghost and moved none of them). The grid
+         * moves cards with POINTER events (gridDrag.ts); the only HTML5
+         * drag that can begin here is the browser's own -- a stretch of
+         * highlighted text, which Shift-click extends across the board --
+         * and it draws its ghost of everything highlighted and cancels the
+         * card gesture. Drops still land (dragover/drop below): this only
+         * refuses drags that START here. */
+        onDragStart={(e) => e.preventDefault()}
         style={{ width: windowW, height: windowH, "--cell": `${CELL}px` } as CSSProperties}
         /* on the WINDOW, not the sheet -- see bareCork above */
         onContextMenuCapture={notePoint}

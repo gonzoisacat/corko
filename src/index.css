@@ -347,6 +347,7 @@ body,
   position: fixed;
   z-index: 200;
   pointer-events: none;
+  -webkit-user-select: none;
   user-select: none;
   will-change: transform;
 }
@@ -1774,6 +1775,7 @@ body.col-resizing .pane-divider {
    fight the drag */
 body.col-resizing {
   cursor: col-resize;
+  -webkit-user-select: none;
   user-select: none;
 }
 
@@ -2113,6 +2115,7 @@ body.col-resizing {
   font-size: 15px;
   line-height: 1;
   padding: 0 2px;
+  -webkit-user-select: none;
   user-select: none;
 }
 /* A mark that stands in the DEAD SPACE takes the space over from the
@@ -3251,6 +3254,7 @@ body.col-resizing {
   outline: none;
   white-space: pre-wrap;
   word-break: break-word;
+  -webkit-user-select: none;
   user-select: none;
 }
 .editable:focus-visible {
@@ -3486,6 +3490,7 @@ mark {
 }
 .options-panel.float-panel.dragging {
   cursor: grabbing;
+  -webkit-user-select: none;
   user-select: none;
 }
 .float-panel-head {
@@ -3576,6 +3581,7 @@ mark {
 }
 .app.dragging {
   cursor: grabbing;
+  -webkit-user-select: none;
   user-select: none;
 }
 /* The card being dragged: a ghost, but still THERE -- it keeps its
@@ -4275,6 +4281,7 @@ mark {
   color: #fff;
   text-transform: uppercase;
   box-shadow: 0 0 0 1.5px #fff;
+  -webkit-user-select: none;
   user-select: none;
 }
 .avatar.self {
@@ -6635,6 +6642,7 @@ mark {
   position: fixed;
   z-index: 80;
   padding: 6px;
+  -webkit-user-select: none;
   user-select: none; /* the pills sweep; a drag must not select their words */
 }
 .notes-pick-presets {
@@ -9601,6 +9609,7 @@ kbd {
   border-radius: 14px;
   border: 1px solid rgba(0, 0, 0, 0.25);
   cursor: pointer;
+  -webkit-user-select: none;
   user-select: none;
 }
 .pd-grid .brand-pin {
@@ -10395,6 +10404,7 @@ kbd {
   border-radius: var(--card-radius);
   border: 1px solid transparent;
   cursor: grab;
+  -webkit-user-select: none;
   user-select: none;
 }
 .kanban-col-head:active {
@@ -12464,6 +12474,7 @@ kbd {
   letter-spacing: 0.04em;
   color: #6d727b;
   cursor: pointer;
+  -webkit-user-select: none;
   user-select: none;
 }
 .legend-connections-btn {
@@ -12871,6 +12882,7 @@ kbd {
   padding: 10px;
   overflow: visible;
   cursor: grab;
+  -webkit-user-select: none;
   user-select: none;
   touch-action: none; /* the pointer gestures own this surface */
   transition: box-shadow 0.12s ease;
@@ -13364,6 +13376,7 @@ kbd {
 /* Nothing selects while panning -- a drag across the board would
    otherwise leave a trail of highlighted titles behind it. */
 .app[data-space-pan] {
+  -webkit-user-select: none;
   user-select: none;
 }
 

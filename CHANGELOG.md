@@ -15,6 +15,17 @@ release it is:
 
 Versions stay below 1.0 until user accounts exist (spec Phase 7).
 
+## 0.9.7 -- 2026-10-18 -- ordinary (epoch 1)
+
+- **Shift-click on the Free Grid adds or removes one card**, the same as
+  Cmd-click. It used to select a range in the board's stored order,
+  which on a grid lit up cards scattered all over it.
+- **Dragging a selection on the Free Grid no longer turns the board into
+  a ghost.** A stray text highlight -- which Shift-click used to extend
+  across the board -- could start the browser's own text drag instead of
+  the card drag. The grid now refuses that drag, clears the highlight
+  when you press a card, and Safari no longer lets card text highlight.
+
 ## 0.9.6 -- 2026-10-06 -- ordinary (epoch 1)
 
 - **An update notice for admins** in the top bar, left of the deploy

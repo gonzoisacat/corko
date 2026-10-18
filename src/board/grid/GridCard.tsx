@@ -159,12 +159,31 @@ export const GridCard = memo(function GridCard({
       title={remote ? `${remote.name} is editing` : undefined}
       onPointerDown={(e) => {
         if (editing || e.button !== 0) return;
+        /* A leftover text highlight under the press is what the browser
+         * drags instead of the card (GridView's onDragStart says how);
+         * clear it before the gesture starts. */
+        const sel = window.getSelection?.();
+        if (sel && !sel.isCollapsed) sel.removeAllRanges();
         onMoveStart(e, card.id);
+      }}
+      /* Shift's DEFAULT on a press is "extend the text highlight to here",
+       * across every card in between -- refused, since on the grid Shift
+       * means "add this card" (the click below). Mouse-down only: the
+       * pointer gesture has already started and is untouched. */
+      onMouseDown={(e) => {
+        if (e.shiftKey && !editing) e.preventDefault();
       }}
       onClick={(e) => {
         e.stopPropagation();
-        if (e.shiftKey) select(card.id, "range");
-        else if (e.metaKey || e.ctrlKey) select(card.id, "toggle");
+        /* SHIFT-CLICK TOGGLES HERE, the same as Cmd-click (owner,
+         * 2026-10-18: "it should probably just function the same way as
+         * command in free grid mode"). Everywhere else Shift extends a
+         * RANGE along sibling order, which is a line you can see in a
+         * list -- on a grid the stored order has nothing to do with
+         * where cards sit, so the range lit up "a bunch of random cards",
+         * and the next drag carried all of them. The lasso already reads
+         * Shift as additive, so the two now agree. */
+        if (e.shiftKey || e.metaKey || e.ctrlKey) select(card.id, "toggle");
         else select(card.id, "single");
       }}
       onDoubleClick={(e) => {
