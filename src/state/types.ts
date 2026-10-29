@@ -1,3 +1,4 @@
+import type { BoardStyle } from "./boardStyle";
 /* ------------------------------------------------------------------ *
  *  Corko data model -- plain-object snapshot types.
  *
@@ -553,6 +554,14 @@ export interface Board {
    * `overrideBackdrop` in settings is that switch.
    * A plain value, like `mark`: small, and set as one piece. */
   look?: BoardLook;
+  /* THE REST OF THE BOARD'S LOOK (owner, 2026-10-29): frame and wall,
+   * the cards' corners, tilt, pins and shadow, the images switch, the
+   * note dots -- once per browser, now the board's, so a shared board
+   * shows "the same visuals I've dialled in". Same rule as `look`: the
+   * viewer's own values are an OVERRIDE behind the one switch. Its own
+   * field so an older build's setBoardLook cannot drop it.
+   * state/boardStyle.ts is the rule; absent = the app's defaults. */
+  style?: BoardStyle;
   /* A GAMMA CURVE OVER THIS BOARD'S PICTURES (owner, 2026-09-10: "I want
    * it per board not per user"). SHARED, like the backdrop above it and
    * for the same reason: if this board's frame grabs came off a dark

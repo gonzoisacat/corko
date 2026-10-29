@@ -15,6 +15,20 @@ release it is:
 
 Versions stay below 1.0 until user accounts exist (spec Phase 7).
 
+## 0.9.9 -- 2026-10-29 -- ordinary (epoch 1)
+
+- **A board's look is the board's.** The frame and wall, card corners,
+  tilt, pushpins and shadows, the images switch and the note dots now
+  belong to the board, like the backdrop: everyone sees the same board.
+  Change them in Options (Global settings) or with the board's own
+  controls. Your own look is still there behind the Overrides button
+  beside the steering wheel; switch it on to see yours instead. The
+  first time an admin opens a board after this update, that admin's
+  look for it becomes the board's.
+- **A board link carries your view.** Copy link now includes Detail or
+  Overview, the zoom and what is folded, and opening it shows the board
+  as it was dressed, with the reader's overrides switched off.
+
 ## 0.9.8 -- 2026-10-28 -- ordinary (epoch 1)
 
 - **A link to one board.** Each board in the Boards menu has a Copy

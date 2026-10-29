@@ -1090,6 +1090,31 @@ describe("notes", () => {
     expect(getSnapshot().boards[0].gamma).toBeUndefined();
   });
 
+  it("the board's style is shared, merges a patch, and survives a duplicate and a file", () => {
+    /* A BOARD field (2026-10-29, state/boardStyle.ts) -- the map's five
+     * places: the snapshot, the per-board projection, buildBoardY and the
+     * plain copy a duplicate and an export take. */
+    const id = getSnapshot().boards[0].id;
+    expect(getSnapshot().boards[0].style).toBeUndefined();
+    ops.setBoardStyle(id, { frame: true, frameStyle: "wood" });
+    ops.setBoardStyle(id, { cardTilt: false, wallColor: "#2b2d31" });
+    expect(getSnapshot().boards[0].style).toEqual({
+      frame: true,
+      frameStyle: "wood",
+      cardTilt: false,
+      wallColor: "#2b2d31",
+    });
+    // nonsense never lands
+    ops.setBoardStyle(id, { frameScale: 99, wallColor: "red", wallImage: "wall-mine" } as never);
+    expect(getSnapshot().boards[0].style?.frameScale).toBe(6);
+    expect(getSnapshot().boards[0].style?.wallColor).toBe("#2b2d31");
+    expect(getSnapshot().boards[0].style?.wallImage).toBeUndefined();
+    const copy = ops.duplicateBoard(id);
+    expect(getSnapshot().boards.find((b) => b.id === copy)?.style?.frameStyle).toBe("wood");
+    const file = sanitizeBoard(JSON.parse(JSON.stringify(getSnapshot().boards[0])));
+    expect(file?.style?.cardTilt).toBe(false);
+  });
+
   it("a card stored by the Corner build reads as Fill, and keeps its own text", () => {
     /* CORNER RETIRED 2026-09-08 (types.ts). A colleague's board -- or
      * this one, mid-sync -- can still carry `imageFit: "corner"`, so the

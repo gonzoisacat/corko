@@ -10,6 +10,24 @@ import { boardIndex, type NestInfo } from "./nesting";
 import type { Board, FieldDef, LegendEntry, Node, Project, TagDef, SplitAxis } from "./types";
 
 export { ops } from "./ydoc";
+import { ops as docOps } from "./ydoc";
+import { bindBoardStyles, boardStylesChanged } from "./settings";
+
+/* THE BOARDS' LOOKS INTO SETTINGS (state/boardStyle.ts). settings.ts
+ * cannot import the doc, so the doc layer hands it a reader and a
+ * writer, and tells it when any board's style changed -- compared by
+ * value, since a board's snapshot changes on every edit to its cards. */
+bindBoardStyles({
+  read: (id) => getSnapshot().boards.find((b) => b.id === id)?.style,
+  write: (id, patch) => docOps.setBoardStyle(id, patch),
+});
+let styleSig = "";
+subscribe(() => {
+  const sig = JSON.stringify(getSnapshot().boards.map((b) => (b.style ? [b.id, b.style] : 0)));
+  if (sig === styleSig) return;
+  styleSig = sig;
+  boardStylesChanged();
+});
 
 /* Live, immutable project snapshot backed by the Yjs doc (the board
  * list, for the switcher). Structural sharing keeps untouched boards'

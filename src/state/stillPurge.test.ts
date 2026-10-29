@@ -46,6 +46,13 @@ describe("referencedStills", () => {
     expect([...referencedStills(p)].sort()).toEqual(["st-a", "st-b", "st-c"]);
   });
 
+  it("counts a board's own wall picture, so a purge cannot sweep it", () => {
+    const b = withStills(["st-a"]);
+    b.style = { frame: true, wallImage: "st-wall-abc" };
+    expect([...referencedStills(project([b]))].sort()).toEqual(["st-a", "st-wall-abc"]);
+    expect([...boardStills(b)].sort()).toEqual(["st-a", "st-wall-abc"]);
+  });
+
   it("is empty for a project with no stills, rather than throwing", () => {
     expect(referencedStills(project([board4()])).size).toBe(0);
     expect(referencedStills(project([])).size).toBe(0);

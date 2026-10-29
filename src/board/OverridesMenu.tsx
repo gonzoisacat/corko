@@ -1,7 +1,15 @@
 import { useEffect, useRef, useState } from "react";
 import { Paintbrush } from "lucide-react";
-import { setSetting, useSettings } from "../state/settings";
+import {
+  hasTweaks,
+  resetToDefaults,
+  saveAsDefaults,
+  setOwnSetting,
+  setSetting,
+  useOwnSettings,
+} from "../state/settings";
 import { BackdropControls } from "./BackdropControls";
+import { CardStyleControls } from "./CardStyleControls";
 
 /* ------------------------------------------------------------------ *
  *  OVERRIDES -- what YOU see instead of what the board says.
@@ -17,8 +25,9 @@ import { BackdropControls } from "./BackdropControls";
  *  card's Text overrides over its tier, the legend's Color Overrides
  *  over the ladder.
  *
- *  Today the board owns one overridable thing, so the menu has one
- *  group. The switch is GLOBAL (settings.overrideBackdrop -- his
+ *  The board owned one overridable thing until 2026-10-29, when the
+ *  rest of its look became the board's too (state/boardStyle.ts): the
+ *  backdrop, then the cards' rows, then your defaults' two buttons. The switch is GLOBAL (settings.overrideBackdrop -- his
  *  "global override sounds elegant"): on, every board shows yours,
  *  where "yours" is your per-board preference over your defaults, as
  *  every board showed before boards had their own. The rows stay
@@ -27,8 +36,11 @@ import { BackdropControls } from "./BackdropControls";
  * ------------------------------------------------------------------ */
 
 export function OverridesMenu({ boardId }: { boardId: string }) {
-  const s = useSettings(boardId);
+  /* YOURS, never the board's merged in: this door's one subject. */
+  const s = useOwnSettings(boardId);
   const on = s.overrideBackdrop;
+  /* live because useOwnSettings re-renders on every settings write */
+  const tweaked = hasTweaks(boardId);
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -95,6 +107,30 @@ export function OverridesMenu({ boardId }: { boardId: string }) {
               }}
               onGrain={(v) => setSetting(boardId, "customGrain", v)}
             />
+            {/* THE CARDS (2026-10-29, when they became the board's --
+                state/boardStyle.ts). The frame, the wall, the images
+                switch and the dots have their own controls on the board,
+                and with this switch on those edit yours. */}
+            <CardStyleControls
+              value={s}
+              disabled={!on}
+              set={(k, v) => setOwnSetting(boardId, k, v)}
+            />
+            {/* Your defaults, from the Options menu's personal group,
+                which no longer holds the look (2026-10-29). */}
+            <div className="options-row options-defaults">
+              <button className="pane-btn" disabled={!on} onClick={() => saveAsDefaults(boardId)}>
+                Save Style Default
+              </button>
+              <button
+                className="pane-btn"
+                disabled={!on || !tweaked}
+                data-tip={on && !tweaked ? "This board already matches your defaults" : undefined}
+                onClick={() => resetToDefaults(boardId)}
+              >
+                Reset to Default
+              </button>
+            </div>
           </div>
         </div>
       )}

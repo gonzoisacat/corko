@@ -36,7 +36,11 @@ export function referencedStills(project: Project): Set<string> {
     if (n.still) out.add(n.still);
     n.children.forEach(walk);
   };
-  for (const b of project.boards) b.roots.forEach(walk);
+  for (const b of project.boards) {
+    b.roots.forEach(walk);
+    /* a board's own wall picture is a still too (state/boardStyle.ts) */
+    if (b.style?.wallImage) out.add(b.style.wallImage);
+  }
   return out;
 }
 
@@ -49,6 +53,7 @@ export function boardStills(board: Board): Set<string> {
     n.children.forEach(walk);
   };
   board.roots.forEach(walk);
+  if (board.style?.wallImage) out.add(board.style.wallImage);
   return out;
 }
 

@@ -13,6 +13,7 @@
  *     tier is its depth in the ladder, ADR 0001).
  * ------------------------------------------------------------------ */
 
+import { sanitizeStyle } from "./boardStyle";
 import { defaultLegend, deriveBorder } from "../colors";
 import { sanitizeMark } from "./mark";
 import { uid } from "./ids";
@@ -423,6 +424,8 @@ export function sanitizeBoard(raw: unknown): Board | null {
   if (cs !== undefined) board.cardSpacing = Math.round(cs);
   const look = sanitizeLook(raw.look);
   if (look) board.look = look;
+  const style = sanitizeStyle(raw.style);
+  if (style) board.style = style;
   const gamma = clampNum(raw.gamma, MIN_GAMMA, MAX_GAMMA);
   if (gamma !== undefined && gamma !== 1) board.gamma = gamma;
   // a board file carries the tag + metadata-category definitions its cards

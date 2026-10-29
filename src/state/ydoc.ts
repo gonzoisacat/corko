@@ -35,6 +35,7 @@ import { IndexeddbPersistence } from "y-indexeddb";
 import { defaultLegend, deriveBorder, nestedDefault, tierDefaultFor, tierLabel, TAG_COLORS } from "../colors";
 import { uid } from "./ids";
 import { MAX_TIERS, cleanFolder, sanitizeLook } from "./validate";
+import { sanitizeStyle, type BoardStyle } from "./boardStyle";
 import type { BoardTemplate } from "./template";
 import { withTierDefaults, tierDefault } from "./tierDefaults";
 import type {
@@ -436,6 +437,7 @@ function buildBoardY(b: Board): YMap {
   if (b.maxRowBeats !== undefined) m.set("maxRowBeats", b.maxRowBeats);
   if (b.cardSpacing !== undefined) m.set("cardSpacing", b.cardSpacing);
   if (b.look) m.set("look", { ...b.look }); // one plain value, like the mark
+  if (b.style) m.set("style", { ...b.style }); // the rest of the look, the same way
   if (b.gamma !== undefined && b.gamma !== 1) m.set("gamma", b.gamma);
   const levels = new Y.Array() as YArr;
   levels.push(b.levels.map(buildLevelY));
@@ -639,6 +641,8 @@ function boardToPlain(m: YMap): Board {
   if (cs !== undefined) b.cardSpacing = cs as number;
   const look = sanitizeLook(m.get("look"));
   if (look) b.look = look;
+  const style = sanitizeStyle(m.get("style"));
+  if (style) b.style = style;
   const gm = m.get("gamma");
   if (typeof gm === "number" && gm !== 1) b.gamma = gm;
   const eg = partArr(m, "edges");
@@ -834,6 +838,8 @@ function projectBoard(m: YMap): Board {
   if (cs !== undefined) bc.snap.cardSpacing = cs as number;
   const look = sanitizeLook(m.get("look"));
   if (look) bc.snap.look = look;
+  const style = sanitizeStyle(m.get("style"));
+  if (style) bc.snap.style = style;
   const gm = m.get("gamma");
   if (typeof gm === "number" && gm !== 1) bc.snap.gamma = gm;
   if (bc.edges.length) bc.snap.edges = bc.edges;
@@ -2190,6 +2196,23 @@ export const ops = {
       const cur = sanitizeLook(m.get("look")) ?? { bg: "cork" as const };
       const next = sanitizeLook({ ...cur, ...patch });
       if (next) m.set("look", next);
+    });
+  },
+
+  /* THE REST OF THE BOARD'S LOOK (state/boardStyle.ts): a patch over
+   * what is set, one plain value, one transaction. Never cleared: once a
+   * board is dressed it stays dressed, and the way not to see it is the
+   * override (the backdrop's rule). */
+  setBoardStyle(boardId: string, patch: BoardStyle) {
+    tx(() => {
+      const m = boardMapById(boardId);
+      if (!m) return;
+      /* the PATCH is cleaned before it merges, so a bad value never
+       * erases a good one already there */
+      const add = sanitizeStyle(patch);
+      if (!add) return;
+      const next = sanitizeStyle({ ...(sanitizeStyle(m.get("style")) ?? {}), ...add });
+      if (next) m.set("style", next);
     });
   },
 

@@ -2,7 +2,9 @@ import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "rea
 import { TypeIcon } from "./typeIcons";
 import { styleOf } from "../state/boardStyles";
 import { projectId, scoped } from "../state/project";
-import { boardLinkFor } from "../state/boardLink";
+import { boardLinkFor, encodeFolds } from "../state/boardLink";
+import { paneViewOf } from "../state/paneView";
+import { fold } from "../state/fold";
 import {
   Check,
   ChevronDown,
@@ -257,8 +259,11 @@ export function BoardShelf({
     const t = setTimeout(() => setLinkedId(null), 1500);
     return () => clearTimeout(t);
   }, [linkedId]);
-  const copyLink = (id: string) => {
-    void navigator.clipboard?.writeText(boardLinkFor(location.href, projectId, id)).then(() => setLinkedId(id));
+  /* The link carries YOUR VIEW of the board (state/boardLink.ts): what a
+   * pane is showing of it, if one is, and your folds either way. */
+  const copyLink = (b: Board) => {
+    const view = { ...(paneViewOf(b.id) ?? {}), folds: encodeFolds(b, fold.isCollapsed) };
+    void navigator.clipboard?.writeText(boardLinkFor(location.href, projectId, b.id, view)).then(() => setLinkedId(b.id));
   };
   const ref = useRef<HTMLDivElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -888,7 +893,7 @@ export function BoardShelf({
                 className="board-row-tool tip-left"
                 aria-label="Copy link to this board"
                 data-tip={linkedId === b.id ? "Link copied" : "Copy link to this board"}
-                onClick={() => copyLink(b.id)}
+                onClick={() => copyLink(b)}
               >
                 {linkedId === b.id ? <Check size={12} /> : <Link size={12} />}
               </button>

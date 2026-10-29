@@ -10,7 +10,7 @@ import {
   useSplitAxis,
 } from "./state/useBoard";
 import { connectSync, useSynced, useSyncStatus } from "./state/sync";
-import { useSettings } from "./state/settings";
+import { setSetting, useSettings } from "./state/settings";
 import { lookAttrs } from "./board/lookScope";
 import type { Board } from "./state/types";
 import { CorkoMark } from "./ui/CorkoMark";
@@ -82,7 +82,8 @@ import { notesRead } from "./state/notesRead";
 import { fold } from "./state/fold";
 import { seenBoards } from "./state/seenBoards";
 import { lastSeen } from "./state/lastSeen";
-import { linkedBoard, takeRefused } from "./state/boardLink";
+import { decodeFolds, laneIds, linkedBoard, linkedView, takeRefused } from "./state/boardLink";
+import { setPendingView } from "./state/paneView";
 import { confirmDialog } from "./ui/confirmDialog";
 
 /* Each mode drawn as the shape of the window it makes -- see viewIcons. */
@@ -420,8 +421,23 @@ export default function App() {
   useEffect(() => {
     if (!linkHit || linkDone) return;
     setLinkDone(true);
-    openFromDoor(linkedBoard!);
-  }, [linkHit, linkDone, openFromDoor]);
+    const id = linkedBoard!;
+    const board = project.boards.find((x) => x.id === id);
+    /* THE SENDER'S VIEW (state/boardLink.ts), and the board as it was
+     * dressed: the reader's override switch goes off (his, 2026-10-29).
+     * Marked seen FIRST, or the first-sight unfurl above would throw the
+     * folds away and reset the view a moment later. */
+    seenBoards.mark(id);
+    setSetting("", "overrideBackdrop", false);
+    const v = linkedView;
+    if (board && v?.folds) {
+      const folded = decodeFolds(board, v.folds);
+      if (folded) fold.setBoardFolds(laneIds(board), folded);
+    }
+    if (v) setPendingView(id, v);
+    openFromDoor(id);
+    if (board && !board.type && v?.view) setPanes((p) => ({ ...p, viewA: v.view! }));
+  }, [linkHit, linkDone, openFromDoor]); // eslint-disable-line react-hooks/exhaustive-deps
   /* Sent here from a board link this browser's password does not open
    * (main.tsx's settle): say so once, rather than land silently. */
   useEffect(() => {

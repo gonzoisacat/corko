@@ -1,22 +1,15 @@
 import { useEffect, useRef, useState } from "react";
 import { SlidersHorizontal, Plus, Settings } from "lucide-react";
-import {
-  applyLook,
-  DEFAULT_SELECTION,
-  LOOKS,
-  hasTweaks,
-  matchesLook,
-  resetToDefaults,
-  saveAsDefaults,
-  setSetting,
-  useSettings } from "../state/settings";
+import { DEFAULT_SELECTION, setSetting, useSettings } from "../state/settings";
+import { resolveStyle, type BoardStyle } from "../state/boardStyle";
+import { CardStyleControls } from "./CardStyleControls";
 import { ops } from "../state/useBoard";
 import { resolveBackdrop } from "../state/boardLook";
 import { DEFAULT_CARD_SPACING, DEFAULT_MAX_ROW_BEATS } from "../state/types";
 import type { Board } from "../state/types";
 import { MAX_TIERS } from "../state/validate";
 import { DraftInput } from "../ui/DraftInput";
-import { TierSettings, Toggle } from "./TierSettings";
+import { TierSettings } from "./TierSettings";
 import { BackdropControls } from "./BackdropControls";
 import { usePanelFlip } from "../ui/usePanelFlip";
 
@@ -42,10 +35,8 @@ export function OptionsMenu({ board }: { board: Board | null }) {
    * this with YOURS and painted yours too -- the arrangement that made
    * the override switch look broken (2026-09-10). */
   const own = resolveBackdrop({ ...s, overrideBackdrop: false }, board?.look);
-  /* Read AFTER the subscription above, so the Reset button appears and
-   * vanishes as you tweak: useSettings re-renders this component on every
-   * settings write, which is what makes this plain call live. */
-  const tweaked = hasTweaks(bid);
+  /* The board's look the same way: the override forced off. */
+  const boardView = resolveStyle({ ...s, overrideBackdrop: false }, board?.style);
   const ref = useRef<HTMLDivElement>(null);
   const panel = usePanelFlip(open);
 
@@ -91,60 +82,8 @@ export function OptionsMenu({ board }: { board: Board | null }) {
               below); what remains is the card things. */}
           <div className="options-group mono">
             Individual user settings
-            <span className="options-group-sub">only you see these, and only on this board</span>
+            <span className="options-group-sub">only you see these</span>
           </div>
-          {/* one-click look bundles; individual toggles below still dial */}
-          <div className="options-row">
-            <span>Look</span>
-            <span className="look-choices">
-              {LOOKS.map((l) => (
-                <button
-                  key={l.id}
-                  className={"look-btn" + (matchesLook(s, l) ? " active" : "")}
-                  onClick={() => applyLook(bid, l)}
-                >
-                  {l.label}
-                </button>
-              ))}
-            </span>
-          </div>
-          <Toggle
-            label="Rounded corners"
-            checked={s.roundedCorners}
-            onChange={(v) => setSetting(bid, "roundedCorners", v)}
-          />
-          <Toggle label="Card tilt" checked={s.cardTilt} onChange={(v) => setSetting(bid, "cardTilt", v)} />
-          <Toggle label="Pushpins" checked={s.pushpins} onChange={(v) => setSetting(bid, "pushpins", v)} />
-          {s.pushpins && (
-            <div className="options-row">
-              <span>Pushpin color</span>
-              <span className="gear-color-cell">
-                <button
-                  className={"gear-auto" + (s.pushpinColor === "random" ? " active" : "")}
-                  data-tip="A random color per pin"
-                  onClick={() => setSetting(bid, "pushpinColor", "random")}
-                >
-                  random
-                </button>
-                <label
-                  className={"gear-swatch" + (s.pushpinColor === "random" ? " swatch-random" : "")}
-                  style={s.pushpinColor === "random" ? undefined : { background: s.pushpinColor }}
-                >
-                  <input
-                    type="color"
-                    value={s.pushpinColor === "random" ? "#cf332f" : s.pushpinColor}
-                    aria-label="Pushpin color"
-                    onChange={(e) => setSetting(bid, "pushpinColor", e.target.value)}
-                  />
-                </label>
-              </span>
-            </div>
-          )}
-          <Toggle
-            label="Drop Shadows"
-            checked={s.liftedShadow}
-            onChange={(v) => setSetting(bid, "liftedShadow", v)}
-          />
           {/* Dark CHROME, not a dark board. It dresses the menus, panels,
               legend and bars and leaves the backdrop alone -- a dark UI
               around a cork board is a reasonable thing to want, and the
@@ -236,37 +175,6 @@ export function OptionsMenu({ board }: { board: Board | null }) {
               </label>
             </span>
           </div>
-          {/* One set of defaults per user (owner's call -- a library of
-              saved looks "will barely get used"). So: promote this board's
-              look to the one every untweaked board shows, or drop this
-              board's tweaks and go back to it.
-
-              Reset is SHOWN ALWAYS and disabled when there is nothing to
-              reset (owner-reported 2026-08-10: "we lost the load style
-              button" -- it was there, just conditional, which is exactly
-              the "a control that vanishes reads as a bug" rule this file
-              already applies to the search menu's bulk actions). Its tip
-              says why it is grayed, which is the one place a tip earns a
-              sentence. */}
-          {board && (
-            <div className="options-row options-defaults">
-              <button
-                className="pane-btn"
-                onClick={() => saveAsDefaults(bid)}
-              >
-                Save Style Default
-              </button>
-              <button
-                className="pane-btn"
-                disabled={!tweaked}
-                data-tip={tweaked ? undefined : "This board already matches your defaults"}
-                onClick={() => resetToDefaults(bid)}
-              >
-                Reset to Default
-              </button>
-            </div>
-          )}
-
           {board && (
             <>
           {/* "on this board" matters: everything under here is Board data
@@ -287,6 +195,13 @@ export function OptionsMenu({ board }: { board: Board | null }) {
             onBg={(bg) => ops.setBoardLook(board.id, { bg })}
             onCustom={(c) => ops.setBoardLook(board.id, { bg: "custom", custom: c })}
             onGrain={(v) => ops.setBoardLook(board.id, { grain: v })}
+          />
+          {/* THE CARDS' LOOK IS THE BOARD'S TOO (owner, 2026-10-29:
+              state/boardStyle.ts), so it left the personal group above
+              for this one. Yours is behind the Overrides door. */}
+          <CardStyleControls
+            value={boardView}
+            set={(k, v) => ops.setBoardStyle(board.id, { [k]: v } as BoardStyle)}
           />
           {/* THE STRIP'S TWO SETTINGS, and only the Beat Map has a strip
               (owner's standing item: each type wants its own Options).

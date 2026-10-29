@@ -143,7 +143,9 @@ export function FramePopover() {
             const file = await pickWallImage();
             if (!file) return;
             setBusy(true);
-            const key = await storeWallImage(bid, file);
+            /* the board's picture when you are looking at the board's
+             * look, yours behind the override (wallImage.ts) */
+            const key = await storeWallImage(bid, file, !s.overrideBackdrop);
             setBusy(false);
             if (!key) return;
             if (s.wallImage) void removeWallImage(s.wallImage);

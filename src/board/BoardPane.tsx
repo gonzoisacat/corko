@@ -7,6 +7,9 @@ import {
   useRef,
   useState,
 } from "react";
+import { useSynced } from "../state/sync";
+import { carryStyle } from "../state/styleCarry";
+import { publishPaneView, takePendingView } from "../state/paneView";
 import type { CSSProperties } from "react";
 import { DEFAULT_CARD_SPACING } from "../state/types";
 import type { Board } from "../state/types";
@@ -141,6 +144,29 @@ export const BoardPane = forwardRef<BoardPaneHandle, {
    * 1 means the whole board, whatever the pane's size. Per pane and per
    * session. */
   const [zoomFactor, setZoomFactor] = useState(1);
+  /* WHAT THIS PANE SHOWS OF ITS BOARD, for a board link to carry, and a
+   * link's view landing here once (state/paneView.ts). */
+  useEffect(() => {
+    publishPaneView(slot, board?.id ?? null, {
+      view: board && !board.type ? view : undefined,
+      zoom: !board?.type && view === "overview" && manual ? zoom : undefined,
+      factor: board?.type ? zoomFactor : undefined,
+      column: !board?.type && view === "overview" ? columnDepth : undefined,
+      depth: !board?.type && view === "overview" && detailDepth !== null ? detailDepth : undefined,
+    });
+  }, [slot, board, view, zoom, manual, zoomFactor, columnDepth, detailDepth]);
+  useEffect(() => {
+    if (!board) return;
+    const p = takePendingView(board.id);
+    if (!p) return;
+    if (p.factor !== undefined) setZoomFactor(p.factor);
+    if (p.zoom !== undefined) {
+      setZoom(p.zoom);
+      setManual(true);
+    }
+    if (p.column !== undefined) setColumnDepth(p.column);
+    setDetailDepth(p.depth ?? null);
+  }, [board?.id]); // eslint-disable-line react-hooks/exhaustive-deps
   // scroll-to-node command; `n` re-fires a repeat jump to the same node
   const [focus, setFocus] = useState<{ id: string; n: number } | null>(null);
 
@@ -292,6 +318,12 @@ export const BoardPane = forwardRef<BoardPaneHandle, {
    * per card. `settingsFor` is identity-stable, so this memo only makes a
    * new object when the look actually changed. */
   const settings = useSettings(board?.id ?? "");
+  /* THE CHANGEOVER (state/styleCarry.ts): an admin's browser dresses an
+   * undressed board with its own look, once, after the room has synced. */
+  const synced = useSynced();
+  useEffect(() => {
+    if (board && synced && !board.style) void carryStyle(board);
+  }, [board, synced]);
   /* THE BOARD'S OWN gamma (types.ts Board.gamma), shared -- everyone
    * looking at this board sees the same curve. Absent is 1, which is
    * off, and off draws no filter at all (see index.css). */

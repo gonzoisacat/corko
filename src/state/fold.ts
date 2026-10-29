@@ -82,6 +82,21 @@ export const fold = {
     if (changed) commit();
   },
 
+  /* SET ONE BOARD'S FOLDS to exactly these lanes, leaving every other
+   * board's alone -- a board link landing the sender's folds
+   * (state/boardLink.ts). `lanes` is every foldable lane of the board. */
+  setBoardFolds(lanes: string[], folded: Set<string>) {
+    let changed = false;
+    for (const id of lanes) {
+      const want = folded.has(id);
+      if (want === collapsed.has(id)) continue;
+      if (want) collapsed.add(id);
+      else collapsed.delete(id);
+      changed = true;
+    }
+    if (changed) commit();
+  },
+
   /* Expand every ancestor of `id` so its row exists in the flatten --
    * backs the Overview -> detail jump into a folded region. */
   reveal(board: Board, id: string) {

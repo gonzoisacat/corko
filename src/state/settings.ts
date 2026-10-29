@@ -1,4 +1,26 @@
 import { useSyncExternalStore } from "react";
+import {
+  isStyleKey,
+  readCardImages,
+  resolveStyle,
+  FRAME_PAD_MAX,
+  FRAME_PAD_MIN,
+  FRAME_SCALE_MAX,
+  FRAME_SCALE_MIN,
+  STYLE_DEFAULTS,
+  type BoardStyle,
+  type CardImages,
+  type FrameStyle,
+} from "./boardStyle";
+export {
+  readCardImages,
+  FRAME_PAD_MAX,
+  FRAME_PAD_MIN,
+  FRAME_SCALE_MAX,
+  FRAME_SCALE_MIN,
+  type CardImages,
+  type FrameStyle,
+} from "./boardStyle";
 
 /* ------------------------------------------------------------------ *
  *  Local view preferences (spec Sec 7 look-and-feel knobs). These are
@@ -229,14 +251,8 @@ export const sameSit = (a: ImageSit, b: ImageSit): boolean =>
  * hides its title and keeps its overlays (tags, dots, pins, values); off
  * -- no pictures, and a pictured card's text overrides with them. The
  * switch cycles on -> only -> off. */
-export type CardImages = "on" | "only" | "off";
-export const readCardImages = (v: unknown): CardImages =>
-  v === "only" ? "only" : v === false || v === "off" ? "off" : "on";
-export type FrameStyle = "aluminum" | "wood";
-export const FRAME_SCALE_MIN = 1;
-export const FRAME_SCALE_MAX = 6;
-export const FRAME_PAD_MIN = 0;
-export const FRAME_PAD_MAX = 6;
+/* CardImages, FrameStyle and the frame's ranges live in boardStyle.ts
+ * now (re-exported above), being part of a board's look. */
 export type SplashMode = "on" | "off" | "fun";
 export type BoardSort = "alpha" | "time";
 export type SortDir = "asc" | "desc";
@@ -274,7 +290,7 @@ export const DEFAULT_SELECTION = "#53f9f3";
  * design). Only a browser with no stored settings sees this; nobody's
  * saved view changes. */
 const DEFAULTS: Settings = {
-  roundedCorners: false,
+  ...STYLE_DEFAULTS, // a board's look (boardStyle.ts) -- one statement of its defaults
   uiTheme: "light",
   tooltips: true,
   splash: "on",
@@ -291,19 +307,7 @@ const DEFAULTS: Settings = {
   tcRate: "",
   customBg: "#e8e6df",
   customGrain: false,
-  cardTilt: true,
-  pushpins: true,
-  pushpinColor: "random",
-  liftedShadow: true,
   legendCollapsed: false,
-  frame: false,
-  frameStyle: "aluminum",
-  frameScale: 1,
-  framePad: 1,
-  wallColor: "#d8d4cb",
-  wallImage: "",
-  noteDots: true,
-  cardImages: "on",
   noteAuthor: "",
   imageSits: {},
   notesColumns: [],
@@ -437,10 +441,46 @@ function changed() {
 export function settingsFor(boardId: string): Settings {
   const hit = cache.get(boardId);
   if (hit && hit.v === version) return hit.value;
-  const patch = boardId ? overrides[boardId] : undefined;
-  const value = patch ? normalize({ ...defaults, ...patch }) : defaults;
+  const own = ownSettingsFor(boardId);
+  /* THE BOARD'S LOOK (state/boardStyle.ts): its style keys come from the
+   * board unless your override switch is on. A pane with no board is
+   * just yours -- there is no board to ask. */
+  const value = boardId && styles ? resolveStyle(own, styles.read(boardId)) : own;
   cache.set(boardId, { v: version, value });
   return value;
+}
+
+/* YOURS, with no board's look merged in: your defaults with your own
+ * tweaks for this board. What the Overrides door shows and edits, and
+ * what the changeover carries onto a board. */
+const ownCache = new Map<string, { v: number; value: Settings }>();
+export function ownSettingsFor(boardId: string): Settings {
+  const hit = ownCache.get(boardId);
+  if (hit && hit.v === version) return hit.value;
+  const patch = boardId ? overrides[boardId] : undefined;
+  const value = patch ? normalize({ ...defaults, ...patch }) : defaults;
+  ownCache.set(boardId, { v: version, value });
+  return value;
+}
+
+/* WHERE THE BOARDS' LOOKS COME FROM, bound by the doc layer at startup
+ * (state/useBoard.ts) so this module never imports the doc. `write`
+ * patches one board's style in one transaction. */
+interface StyleSource {
+  read(boardId: string): BoardStyle | undefined;
+  write(boardId: string, patch: BoardStyle): void;
+}
+let styles: StyleSource | null = null;
+export function bindBoardStyles(src: StyleSource): void {
+  styles = src;
+  boardStylesChanged();
+}
+/* A board's style changed in the doc: every resolved board is stale. No
+ * persist -- nothing of yours changed. */
+export function boardStylesChanged(): void {
+  version++;
+  cache.clear();
+  listeners.forEach((l) => l());
 }
 
 /* Set one key. A GLOBAL key (your name) always lands in the defaults
@@ -448,6 +488,23 @@ export function settingsFor(boardId: string): Settings {
  * unless boardId is empty, which means "edit my defaults directly" (the
  * New-board modal's Look row, where there is no board yet). */
 export function setSetting<K extends keyof Settings>(
+  boardId: string,
+  key: K,
+  value: Settings[K],
+): void {
+  /* A control on the board edits WHAT YOU ARE LOOKING AT: with your
+   * override switch off that is the board's look, for everyone; on, your
+   * own. (The Options menu writes the board's directly and the Overrides
+   * door writes yours directly -- each has one subject.) */
+  if (boardId && styles && isStyleKey(key) && !ownSettingsFor(boardId).overrideBackdrop) {
+    styles.write(boardId, { [key]: value } as BoardStyle);
+    return;
+  }
+  setOwnSetting(boardId, key, value);
+}
+
+/* Set one key of YOURS, whatever the switch says (the Overrides door). */
+export function setOwnSetting<K extends keyof Settings>(
   boardId: string,
   key: K,
   value: Settings[K],
@@ -467,7 +524,7 @@ export function setSetting<K extends keyof Settings>(
  * board shows. Its own tweaks go with it -- they are the defaults now, so
  * keeping them would be a layer that changes nothing. */
 export function saveAsDefaults(boardId: string): void {
-  defaults = { ...settingsFor(boardId) };
+  defaults = { ...ownSettingsFor(boardId) };
   const next = { ...overrides };
   delete next[boardId];
   overrides = next;
@@ -502,6 +559,15 @@ export function useSettings(boardId = ""): Settings {
   return useSyncExternalStore(
     subscribe,
     () => settingsFor(boardId),
+    () => DEFAULTS,
+  );
+}
+
+/* Yours alone, the board's look left out (the Overrides door). */
+export function useOwnSettings(boardId = ""): Settings {
+  return useSyncExternalStore(
+    subscribe,
+    () => ownSettingsFor(boardId),
     () => DEFAULTS,
   );
 }
@@ -548,9 +614,13 @@ export const LOOKS: LookPreset[] = [
   },
 ];
 
-export function applyLook(boardId: string, look: LookPreset): void {
+export function applyLook(
+  boardId: string,
+  look: LookPreset,
+  set: <K extends keyof Settings>(boardId: string, key: K, value: Settings[K]) => void = setSetting,
+): void {
   for (const [k, v] of Object.entries(look.apply)) {
-    setSetting(boardId, k as keyof Settings, v as Settings[keyof Settings]);
+    set(boardId, k as keyof Settings, v as Settings[keyof Settings]);
   }
 }
 
