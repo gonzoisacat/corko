@@ -446,6 +446,14 @@ export function GridView({
       if (!ownGesture(slot)) return; // another column's drag is not ours to end
       const g = gridDrag.end();
       if (!g) return;
+      /* A CANCELLED GESTURE WRITES NOTHING, the way Escape abandons one
+       * (2026-10-18). The browser sends `pointercancel` when it takes the
+       * pointer away -- a native drag of a text highlight did exactly
+       * that -- and treating it as a release saved the selection wherever
+       * the pointer happened to be, and past the top-left edge shifted
+       * EVERY card on the board (landCells). The owner's live board took
+       * that; a cancel is not a decision, so the cards go home. */
+      if (up.type === "pointercancel") return;
       /* THE DOC IS WRITTEN ONCE, HERE. Everything above is live paint --
        * a write per pointermove would be a sync broadcast per frame, and
        * would make one drag a hundred undo steps. */

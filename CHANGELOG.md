@@ -15,6 +15,23 @@ release it is:
 
 Versions stay below 1.0 until user accounts exist (spec Phase 7).
 
+## 0.9.8 -- 2026-10-28 -- ordinary (epoch 1)
+
+- **A link to one board.** Each board in the Boards menu has a Copy
+  link button. Someone whose browser already has the password opens
+  straight onto that board; anyone else gets the password screen first.
+  A link to a deleted board asks which board to open. A link into a
+  project your password doesn't open says so.
+- **One-click deploys and Update Corko build again on Cloudflare.**
+  Since esbuild 0.28.2 came out, Cloudflare's npm refused the lockfile
+  ("Missing: esbuild@0.28.2 from lock file"); the lockfile now records
+  it. Nothing else changed version.
+- **A cancelled drag on the Free Grid no longer moves anything.** When
+  the browser interrupted a drag, the grid saved the cards wherever the
+  pointer was at that moment -- and past the board's left or top edge,
+  that shifted every card on the board. Now the cards go back, as they
+  do when you press Escape.
+
 ## 0.9.7 -- 2026-10-18 -- ordinary (epoch 1)
 
 - **Shift-click on the Free Grid adds or removes one card**, the same as
@@ -23,8 +40,8 @@ Versions stay below 1.0 until user accounts exist (spec Phase 7).
 - **Dragging a selection on the Free Grid no longer turns the board into
   a ghost.** A stray text highlight -- which Shift-click used to extend
   across the board -- could start the browser's own text drag instead of
-  the card drag. The grid now refuses that drag, clears the highlight
-  when you press a card, and Safari no longer lets card text highlight.
+  the card drag. The grid now refuses that drag and clears the highlight
+  when you press a card.
 
 ## 0.9.6 -- 2026-10-06 -- ordinary (epoch 1)
 

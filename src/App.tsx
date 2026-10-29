@@ -82,6 +82,8 @@ import { notesRead } from "./state/notesRead";
 import { fold } from "./state/fold";
 import { seenBoards } from "./state/seenBoards";
 import { lastSeen } from "./state/lastSeen";
+import { linkedBoard, takeRefused } from "./state/boardLink";
+import { confirmDialog } from "./ui/confirmDialog";
 
 /* Each mode drawn as the shape of the window it makes -- see viewIcons. */
 const PROJECT_VIEWS = [
@@ -396,8 +398,15 @@ export default function App() {
    * no door. Once the boards are there it draws, behind the splash. */
   const [doorDone, setDoorDone] = useState(false);
   const dismissDoor = useCallback(() => setDoorDone(true), []);
+  /* A BOARD LINK (state/boardLink.ts, owner 2026-10-28) answers the
+   * door's question before it is asked: once the boards are here, a
+   * linked board that exists opens and the door never draws; one that is
+   * gone puts the door up however recently this browser was here, since
+   * "which board?" is exactly what is left to ask. */
+  const linkHit = !!linkedBoard && settled && project.boards.some((b) => b.id === linkedBoard);
   const askBoard =
-    !wasRecent && !doorDone && ready && settled && project.boards.length > 0 && !showPicker;
+    (linkedBoard ? !linkHit : !wasRecent) &&
+    !doorDone && ready && settled && project.boards.length > 0 && !showPicker;
   /* SINGLE VIEW, in the left pane (his call). selectBoard already lands
    * you in the view that board's type opens in. */
   const openFromDoor = useCallback(
@@ -407,6 +416,21 @@ export default function App() {
     },
     [selectBoard],
   );
+  const [linkDone, setLinkDone] = useState(false);
+  useEffect(() => {
+    if (!linkHit || linkDone) return;
+    setLinkDone(true);
+    openFromDoor(linkedBoard!);
+  }, [linkHit, linkDone, openFromDoor]);
+  /* Sent here from a board link this browser's password does not open
+   * (main.tsx's settle): say so once, rather than land silently. */
+  useEffect(() => {
+    if (!takeRefused()) return;
+    void confirmDialog.tell(
+      "That link is to a project your password doesn't open.",
+      "Ask whoever sent it.",
+    );
+  }, []);
 
   // Join the shared room once for the tab's lifetime (StrictMode-safe;
   // the connection deliberately outlives component churn).

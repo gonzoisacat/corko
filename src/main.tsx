@@ -9,6 +9,7 @@ import { installLayoutDoctor } from "./ui/layoutDoctor";
 import { checkAccess, setupSkipped, skipSetup, storedKey, type AccessState } from "./state/access";
 import { chooseBlobStore } from "./state/blobStore";
 import { settingsFor } from "./state/settings";
+import { linkedBoard, noteRefused } from "./state/boardLink";
 import "./index.css";
 
 // dev-only console diagnostics (corko.doctor / corko.zoneAt); tree-shaken out
@@ -40,6 +41,11 @@ function Root() {
    * means go there; several means ask (ProjectChooser); the key opening
    * this one means carry on. Returns whether the boot may continue. */
   const [choose, setChoose] = useState<string[] | null>(null);
+  /* Set when `settle` has sent this tab to another project: the reload
+   * is not instant, and until it lands nothing may mount -- the app
+   * would join a room this key cannot open, and take a board link's
+   * refused note (state/boardLink.ts) onto a page about to vanish. */
+  const [leaving, setLeaving] = useState(false);
   /* The Admin setup card, skipped in this browser (state/access.ts). */
   const [skipped, setSkipped] = useState(setupSkipped);
   const settle = (a: AccessState): boolean => {
@@ -47,7 +53,11 @@ function Root() {
      * from the app a moment ago that the access map does not name yet --
      * so the deployer is never asked. */
     if (!a.ok || a.admin || !a.projects || a.projects.includes(projectId)) return true;
+    /* A board link into a project this key does not open: wherever the
+     * visitor lands next says so (state/boardLink.ts, his pick iii). */
+    if (linkedBoard) noteRefused();
     if (a.projects.length === 1) {
+      setLeaving(true);
       switchProject(a.projects[0]);
       return false;
     }
@@ -80,7 +90,7 @@ function Root() {
    * says so any more. `GET /auth` reports it. */
   return (
     <>
-      {access &&
+      {access && !leaving &&
         (access.required && !access.ok ? (
           <AccessGate
             onUnlocked={(a) => {

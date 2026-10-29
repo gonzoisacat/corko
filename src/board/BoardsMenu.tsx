@@ -1,7 +1,8 @@
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { TypeIcon } from "./typeIcons";
 import { styleOf } from "../state/boardStyles";
-import { scoped } from "../state/project";
+import { projectId, scoped } from "../state/project";
+import { boardLinkFor } from "../state/boardLink";
 import {
   Check,
   ChevronDown,
@@ -10,6 +11,7 @@ import {
   Copy,
   Download,
   FolderPlus,
+  Link,
   Package,
   Pencil,
   Plus,
@@ -247,6 +249,17 @@ export function BoardShelf({
 }) {
   const project = useProject();
   const [renamingId, setRenamingId] = useState<string | null>(null);
+  /* Which board's link was just copied: its tool shows a check for a
+   * moment, the way the project's Copy button says Copied. */
+  const [linkedId, setLinkedId] = useState<string | null>(null);
+  useEffect(() => {
+    if (!linkedId) return;
+    const t = setTimeout(() => setLinkedId(null), 1500);
+    return () => clearTimeout(t);
+  }, [linkedId]);
+  const copyLink = (id: string) => {
+    void navigator.clipboard?.writeText(boardLinkFor(location.href, projectId, id)).then(() => setLinkedId(id));
+  };
   const ref = useRef<HTMLDivElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const projectFileRef = useRef<HTMLInputElement>(null);
@@ -867,6 +880,17 @@ export function BoardShelf({
                 }}
               >
                 <Copy size={12} />
+              </button>
+              {/* A LINK TO THIS BOARD (owner, 2026-10-28): a browser that
+                  already holds the password opens straight onto it;
+                  state/boardLink.ts has the rest. */}
+              <button
+                className="board-row-tool tip-left"
+                aria-label="Copy link to this board"
+                data-tip={linkedId === b.id ? "Link copied" : "Copy link to this board"}
+                onClick={() => copyLink(b.id)}
+              >
+                {linkedId === b.id ? <Check size={12} /> : <Link size={12} />}
               </button>
               <button className="board-row-tool tip-left" aria-label="Export (.json)" data-tip="Export (.json)" onClick={() => exportBoardFile(b, project.tags, project.fields)}>
                 <Download size={12} />
